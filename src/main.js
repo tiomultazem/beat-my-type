@@ -101,7 +101,8 @@ function updateQuotaDisplay(remaining, max) {
     adminDailyQuotaInput.value = state.maxQuota;
   }
   if (remaining !== undefined && remaining !== null) {
-    quotaRemaining.textContent = remaining;
+    if (quotaRemaining) quotaRemaining.textContent = remaining;
+    if (resAttempts) resAttempts.textContent = remaining;
   }
 }
 
