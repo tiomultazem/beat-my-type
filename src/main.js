@@ -887,7 +887,18 @@ function handleKeydown(e) {
 
   if (e.key === 'Backspace') {
     if (state.charIndex > 0) {
-      charSpans[state.charIndex].classList.remove('cursor');
+      let hasActiveError = false;
+      for (let i = 0; i < state.charIndex; i++) {
+        if (charSpans[i].classList.contains('wrong')) {
+          hasActiveError = true;
+          break;
+        }
+      }
+      if (!hasActiveError) return;
+
+      if (charSpans[state.charIndex]) {
+        charSpans[state.charIndex].classList.remove('cursor');
+      }
       state.charIndex--;
       charSpans[state.charIndex].className = 'char cursor';
       state.keystrokes.push({ t: Math.round(now - state.startTime), k: 'Backspace', err: false });
