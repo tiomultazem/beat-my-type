@@ -11,7 +11,7 @@ const state = {
   activeUnit: localStorage.getItem('BMT_UNIT') || 'wpm',
   isOpen: localStorage.getItem('BMT_IS_OPEN') !== 'false',
   adminName: 'Admin',
-  adminPin: '',
+  adminPin: sessionStorage.getItem('BMT_ADMIN_PIN') || '',
   candidateId: '',
   candidateName: '',
   targetText: '',
@@ -46,12 +46,15 @@ const adminNameDashboard = document.getElementById('adminNameDashboard');
 const adminWpmDashboard = document.getElementById('adminWpmDashboard');
 const adminAccDashboard = document.getElementById('adminAccDashboard');
 const adminPanel = document.getElementById('adminPanel');
+const adminPinGate = document.getElementById('adminPinGate');
+const adminPanelContent = document.getElementById('adminPanelContent');
+const gatePinInput = document.getElementById('gatePinInput');
+const gatePinError = document.getElementById('gatePinError');
 const arenaCard = document.getElementById('arenaCard');
 const candidateIdInput = document.getElementById('candidateId');
 const candidateNameInput = document.getElementById('candidateName');
 const startTestBtn = document.getElementById('startTestBtn');
 const candidateError = document.getElementById('candidateError');
-const adminPinInput = document.getElementById('adminPinInput');
 const adminNameInput = document.getElementById('adminNameInput');
 const toggleChallengeBtn = document.getElementById('toggleChallengeBtn');
 const closedNoticeLogin = document.getElementById('closedNoticeLogin');
@@ -190,67 +193,92 @@ function updateChallengeStatusUI() {
   }
 }
 
-async function executeToggleChallenge(pin) {
-  if (!pin) {
-    if (adminPinInput) adminPinInput.focus();
-    return;
-  }
-  const nextStatus = state.isOpen ? 'CLOSED' : 'OPEN';
-  if (toggleChallengeBtn) {
-    toggleChallengeBtn.disabled = true;
-    toggleChallengeBtn.textContent = 'Menyimpan...';
-  }
+if (gatePinInput) {
+  gatePinInput.addEventListener('input', async () => {
+    const pin = gatePinInput.value.trim();
+    if (gatePinError) gatePinError.textContent = '';
+    if (pin.length === 6) {
+      gatePinInput.disabled = true;
+      if (gatePinError) gatePinError.textContent = 'Memverifikasi...';
 
-  try {
-    const res = await fetch(state.apiUrl, {
-      method: 'POST',
-      body: JSON.stringify({ setChallengeStatus: nextStatus, adminPin: pin })
-    });
-    const json = await res.json();
-    if (json.status === 'success') {
-      state.isOpen = (json.challengeStatus !== 'CLOSED');
-      localStorage.setItem('BMT_IS_OPEN', state.isOpen ? 'true' : 'false');
-      updateChallengeStatusUI();
-    } else {
-      alert(json.message || 'Gagal mengubah status: PIN salah.');
-      if (adminPinInput) {
-        adminPinInput.value = '';
-        adminPinInput.focus();
+      try {
+        const res = await fetch(state.apiUrl, {
+          method: 'POST',
+          body: JSON.stringify({ verifyAdminPin: true, adminPin: pin })
+        });
+        const json = await res.json();
+        if (json.status === 'success') {
+          state.adminPin = pin;
+          sessionStorage.setItem('BMT_ADMIN_PIN', pin);
+          unlockAdminPanel();
+        } else {
+          if (gatePinError) gatePinError.textContent = json.message || 'PIN Admin tidak valid!';
+          gatePinInput.disabled = false;
+          gatePinInput.value = '';
+          gatePinInput.focus();
+        }
+      } catch (e) {
+        if (gatePinError) gatePinError.textContent = 'Gagal verifikasi: ' + e.message;
+        gatePinInput.disabled = false;
       }
     }
-  } catch (e) {
-    alert('Gagal mengubah status: ' + e.message);
-  } finally {
-    if (toggleChallengeBtn) toggleChallengeBtn.disabled = false;
+  });
+
+  gatePinInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      gatePinInput.dispatchEvent(new Event('input'));
+    }
+  });
+}
+
+function showAdminPinGate() {
+  if (adminPinGate) adminPinGate.classList.remove('hidden');
+  if (adminPanelContent) adminPanelContent.classList.add('hidden');
+  if (gatePinInput) {
+    gatePinInput.value = '';
+    gatePinInput.disabled = false;
+    setTimeout(() => gatePinInput.focus(), 100);
   }
 }
 
-if (adminPinInput) {
-  adminPinInput.addEventListener('input', () => {
-    const pin = adminPinInput.value.trim();
-    // Begitu angka terakhir (digit ke-6) diketik: langsung submit tanpa perlu tekan Enter
-    if (pin.length === 6) {
-      executeToggleChallenge(pin);
-    }
-  });
-
-  adminPinInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
-      const pin = adminPinInput.value.trim();
-      if (pin) executeToggleChallenge(pin);
-    }
-  });
+function unlockAdminPanel() {
+  if (adminPinGate) adminPinGate.classList.add('hidden');
+  if (adminPanelContent) adminPanelContent.classList.remove('hidden');
 }
 
 if (toggleChallengeBtn) {
-  toggleChallengeBtn.addEventListener('click', () => {
-    const pin = adminPinInput ? adminPinInput.value.trim() : '';
-    if (pin.length < 6) {
-      alert('Harap ketik 6 digit PIN Admin terlebih dahulu!');
-      if (adminPinInput) adminPinInput.focus();
+  toggleChallengeBtn.addEventListener('click', async () => {
+    if (!state.adminPin) {
+      showAdminPinGate();
       return;
     }
-    executeToggleChallenge(pin);
+    const nextStatus = state.isOpen ? 'CLOSED' : 'OPEN';
+    toggleChallengeBtn.disabled = true;
+    toggleChallengeBtn.textContent = 'Menyimpan...';
+
+    try {
+      const res = await fetch(state.apiUrl, {
+        method: 'POST',
+        body: JSON.stringify({ setChallengeStatus: nextStatus, adminPin: state.adminPin })
+      });
+      const json = await res.json();
+      if (json.status === 'success') {
+        state.isOpen = (json.challengeStatus !== 'CLOSED');
+        localStorage.setItem('BMT_IS_OPEN', state.isOpen ? 'true' : 'false');
+        updateChallengeStatusUI();
+      } else {
+        alert(json.message || 'Gagal mengubah status');
+        if (json.message && json.message.includes('PIN')) {
+          sessionStorage.removeItem('BMT_ADMIN_PIN');
+          state.adminPin = '';
+          showAdminPinGate();
+        }
+      }
+    } catch (e) {
+      alert('Gagal mengubah status: ' + e.message);
+    } finally {
+      toggleChallengeBtn.disabled = false;
+    }
   });
 }
 
@@ -300,6 +328,12 @@ if (state.mode === 'admin') {
   adminPanel.classList.remove('hidden');
   identityCard.classList.add('hidden');
   historyCard.classList.add('hidden');
+
+  if (state.adminPin) {
+    unlockAdminPanel();
+  } else {
+    showAdminPinGate();
+  }
 }
 
 async function checkSavedSession() {
@@ -509,10 +543,8 @@ launchArenaBtn.addEventListener('click', () => {
 
 // Admin Benchmark Trigger
 setAdminBenchmarkBtn.addEventListener('click', () => {
-  const pin = adminPinInput ? adminPinInput.value.trim() : '';
-  if (!pin || pin.length < 6) {
-    alert('Harap masukkan 6 digit PIN Admin terlebih dahulu!');
-    if (adminPinInput) adminPinInput.focus();
+  if (!state.adminPin) {
+    showAdminPinGate();
     return;
   }
   const text = customTargetText.value.trim();
@@ -523,7 +555,6 @@ setAdminBenchmarkBtn.addEventListener('click', () => {
   }
   state.targetText = text;
   state.adminName = name;
-  state.adminPin = pin;
   adminPanel.classList.add('hidden');
   arenaCard.classList.remove('hidden');
   setupArena();
@@ -704,7 +735,7 @@ async function submitAdminBenchmark(wpm, cpm, accuracy, duration) {
       method: 'POST',
       body: JSON.stringify({
         isAdminBenchmark: true,
-        adminPin: state.adminPin || (adminPinInput ? adminPinInput.value.trim() : ''),
+        adminPin: state.adminPin,
         adminName: state.adminName,
         targetText: state.targetText,
         wpm: wpm,
