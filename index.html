@@ -13,6 +13,10 @@
         <h1>BEAT<span>MY</span>TYPE</h1>
         <p id="modeBadge" class="badge">Mode: Penantang</p>
       </div>
+      <div class="unit-toggle-group">
+        <button type="button" class="unit-btn active" data-unit="wpm">WPM</button>
+        <button type="button" class="unit-btn" data-unit="cpm">CPM</button>
+      </div>
     </header>
 
     <!-- IDENTITAS PESERTA (LOGIN) -->
@@ -21,7 +25,7 @@
         <span class="target-label">Target yang Harus Dikalahkan:</span>
         <div class="target-stats">
           <strong id="adminNameLogin">Admin</strong>
-          <span class="target-highlight"><span id="adminWpmLogin">--</span> WPM</span>
+          <span class="target-highlight" id="adminWpmLogin">--</span>
           <span class="target-sub">(Akurasi: <span id="adminAccLogin">--</span>%)</span>
         </div>
       </div>
@@ -49,7 +53,7 @@
         <span class="target-label">Target yang Harus Dikalahkan:</span>
         <div class="target-stats">
           <strong id="adminNameDashboard">Admin</strong>
-          <span class="target-highlight"><span id="adminWpmDashboard">--</span> WPM</span>
+          <span class="target-highlight" id="adminWpmDashboard">--</span>
           <span class="target-sub">(Akurasi: <span id="adminAccDashboard">--</span>%)</span>
         </div>
       </div>
@@ -91,16 +95,12 @@
         </div>
       </div>
 
-      <!-- LIVE STATS & UNIT TOGGLE -->
+      <!-- LIVE STATS -->
       <div class="stats-header">
         <div class="stats-bar">
           <div class="stat-item"><span class="stat-val" id="liveSpeed">0</span><span class="stat-lbl" id="speedUnitLbl">WPM</span></div>
           <div class="stat-item"><span class="stat-val" id="liveAcc">100%</span><span class="stat-lbl">Akurasi</span></div>
           <div class="stat-item"><span class="stat-val" id="liveTime">0s</span><span class="stat-lbl">Waktu</span></div>
-        </div>
-        <div class="unit-toggle-group">
-          <button type="button" class="unit-btn active" data-unit="wpm">WPM</button>
-          <button type="button" class="unit-btn" data-unit="cpm">CPM</button>
         </div>
       </div>
 
