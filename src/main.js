@@ -73,8 +73,8 @@ const closeModalBtn = document.getElementById('closeModalBtn');
 const updateToast = document.getElementById('updateToast');
 const reloadAppBtn = document.getElementById('reloadAppBtn');
 
-// Version Polling for Auto-Update
-let currentVersion = '1.0.1';
+// Version Polling for Auto-Update (Dynamic Version Detection)
+let currentVersion = null;
 initUpdateChecker();
 
 function initUpdateChecker() {
@@ -82,8 +82,17 @@ function initUpdateChecker() {
     window.location.reload(true);
   });
 
+  // Ambil versi awal saat halaman pertama kali dibuka
+  fetch(`/version.json?t=${Date.now()}`, { cache: 'no-store' })
+    .then(res => res.json())
+    .then(data => {
+      if (data && data.version) currentVersion = data.version;
+    })
+    .catch(() => {});
+
+  // Cek setiap 45 detik sekali
   setInterval(async () => {
-    if (state.isFinished || state.startTime) return;
+    if (state.isFinished || state.startTime || !currentVersion) return;
     try {
       const res = await fetch(`/version.json?t=${Date.now()}`, { cache: 'no-store' });
       if (!res.ok) return;
@@ -99,6 +108,9 @@ function initUpdateChecker() {
 
 // Fetch Benchmark Target globally
 fetchTargetBenchmark();
+
+// Pulihkan sesi penantang saat halaman dimuat ulang (Auto-Login)
+checkSavedSession();
 
 // Unit Toggle Handler
 unitButtons.forEach(btn => {
