@@ -91,11 +91,17 @@
         </div>
       </div>
 
-      <!-- LIVE STATS -->
-      <div class="stats-bar">
-        <div class="stat-item"><span class="stat-val" id="liveWpm">0</span><span class="stat-lbl">WPM</span></div>
-        <div class="stat-item"><span class="stat-val" id="liveAcc">100%</span><span class="stat-lbl">Akurasi</span></div>
-        <div class="stat-item"><span class="stat-val" id="liveTime">0s</span><span class="stat-lbl">Waktu</span></div>
+      <!-- LIVE STATS & UNIT TOGGLE -->
+      <div class="stats-header">
+        <div class="stats-bar">
+          <div class="stat-item"><span class="stat-val" id="liveSpeed">0</span><span class="stat-lbl" id="speedUnitLbl">WPM</span></div>
+          <div class="stat-item"><span class="stat-val" id="liveAcc">100%</span><span class="stat-lbl">Akurasi</span></div>
+          <div class="stat-item"><span class="stat-val" id="liveTime">0s</span><span class="stat-lbl">Waktu</span></div>
+        </div>
+        <div class="unit-toggle-group">
+          <button type="button" class="unit-btn active" data-unit="wpm">WPM</button>
+          <button type="button" class="unit-btn" data-unit="cpm">CPM</button>
+        </div>
       </div>
 
       <!-- TYPING DISPLAY -->
