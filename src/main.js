@@ -368,6 +368,7 @@ async function showHistoryDashboard() {
         state.targetText = json.admin.targetText || state.targetText;
         state.adminName = json.admin.adminName || 'Admin';
         state.adminWpm = json.admin.adminWpm || 0;
+        state.adminCpm = json.admin.adminCpm || Math.round(state.adminWpm * 5);
         state.adminAccuracy = json.admin.adminAccuracy || 0;
         state.adminGhost = json.admin.adminGhost || [];
         state.isOpen = (json.admin.isOpen !== false);
