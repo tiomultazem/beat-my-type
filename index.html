@@ -4,14 +4,19 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Beat My Type - Typing Benchmark Challenge</title>
+  <link rel="icon" type="image/x-icon" href="./icon.ico">
+  <link rel="icon" type="image/png" href="./icon.png">
   <link rel="stylesheet" href="/src/style.css">
 </head>
 <body>
   <div class="container">
     <header class="header">
       <div class="brand">
-        <h1>BEAT<span>MY</span>TYPE</h1>
-        <p id="modeBadge" class="badge">Mode: Penantang</p>
+        <img src="./icon.png" alt="Beat My Type" class="brand-logo">
+        <div class="brand-text">
+          <h1>BEAT<span>MY</span>TYPE</h1>
+          <p id="modeBadge" class="badge">Mode: Penantang</p>
+        </div>
       </div>
       <div class="unit-toggle-group">
         <button type="button" class="unit-btn active" data-unit="wpm">WPM</button>
@@ -34,7 +39,7 @@
 
       <h2>Identitas Penantang</h2>
       <div class="form-row">
-        <input type="text" id="candidateId" placeholder="ID / No. Peserta / Email" required>
+        <input type="text" id="candidateId" placeholder="Email" required>
         <input type="text" id="candidateName" placeholder="Nama Lengkap" required>
         <button id="startTestBtn" class="btn-primary">Masuk</button>
       </div>
@@ -53,24 +58,26 @@
         <button id="logoutBtn" class="btn-sm">Ganti Peserta</button>
       </div>
 
-      <div class="target-card">
-        <span class="target-label">Target yang Harus Dikalahkan:</span>
-        <div class="target-stats">
-          <strong id="adminNameDashboard">Admin</strong>
-          <span class="target-highlight" id="adminWpmDashboard">--</span>
-          <span class="target-sub">(Akurasi: <span id="adminAccDashboard">--</span>%)</span>
+      <div class="dashboard-stats-row">
+        <div class="target-card">
+          <span class="target-label">Target yang Harus Dikalahkan:</span>
+          <div class="target-stats">
+            <strong id="adminNameDashboard">Admin</strong>
+            <span class="target-highlight" id="adminWpmDashboard">--</span>
+            <span class="target-sub">(Akurasi: <span id="adminAccDashboard">--</span>%)</span>
+          </div>
         </div>
-      </div>
 
-      <div class="quota-box">
-        <span>Sisa Kesempatan Hari Ini:</span>
-        <strong id="quotaRemaining">3</strong> / 3
+        <div class="quota-box">
+          <span>Sisa Kesempatan Hari Ini:</span>
+          <strong id="quotaRemaining">3</strong> / 3
+        </div>
       </div>
 
       <h3>Riwayat Percobaan Anda:</h3>
       <div id="historyList" class="history-list"></div>
 
-      <button id="launchArenaBtn" class="btn-primary" style="margin-top: 16px; width: 100%;">Mulai Tes Sekarang</button>
+      <button id="launchArenaBtn" class="btn-primary" style="margin-top: 16px; width: 100%;">Mulai tantang admin!</button>
     </section>
 
     <!-- ADMIN SETUP PANEL (Hanya muncul jika mode=admin) -->
@@ -139,6 +146,11 @@
         <button id="closeModalBtn" class="btn-primary">Tutup</button>
       </div>
     </div>
+
+    <!-- FOOTER ATRIBUSI -->
+    <footer class="attribution">
+      <a href="https://www.flaticon.com/free-icons/keyboard-button" title="keyboard button icons" target="_blank" rel="noopener noreferrer">Keyboard button icons created by Magnific - Flaticon</a>
+    </footer>
   </div>
 
   <script type="module" src="/src/main.js"></script>
