@@ -9,6 +9,7 @@ const state = {
   apiUrl: DEFAULT_API_URL,
   mode: new URLSearchParams(window.location.search).get('mode') === 'admin' ? 'admin' : 'challenger',
   activeUnit: localStorage.getItem('BMT_UNIT') || 'wpm',
+  isOpen: true,
   adminName: 'Admin',
   candidateId: '',
   candidateName: '',
@@ -49,6 +50,9 @@ const candidateNameInput = document.getElementById('candidateName');
 const startTestBtn = document.getElementById('startTestBtn');
 const candidateError = document.getElementById('candidateError');
 const adminNameInput = document.getElementById('adminNameInput');
+const toggleChallengeBtn = document.getElementById('toggleChallengeBtn');
+const closedNoticeLogin = document.getElementById('closedNoticeLogin');
+const closedNoticeDashboard = document.getElementById('closedNoticeDashboard');
 const customTargetText = document.getElementById('customTargetText');
 const setAdminBenchmarkBtn = document.getElementById('setAdminBenchmarkBtn');
 const textDisplay = document.getElementById('textDisplay');
@@ -131,6 +135,69 @@ unitButtons.forEach(btn => {
 });
 updateSpeedLabels();
 
+function updateChallengeStatusUI() {
+  if (state.mode === 'admin' && toggleChallengeBtn) {
+    if (state.isOpen) {
+      toggleChallengeBtn.textContent = 'Buka (OPEN)';
+      toggleChallengeBtn.className = 'btn-sm status-open';
+    } else {
+      toggleChallengeBtn.textContent = 'Tutup (CLOSED)';
+      toggleChallengeBtn.className = 'btn-sm status-closed';
+    }
+  }
+
+  // Pengaturan Tampilan untuk Penantang
+  if (closedNoticeLogin) {
+    if (state.isOpen) closedNoticeLogin.classList.add('hidden');
+    else closedNoticeLogin.classList.remove('hidden');
+  }
+
+  if (closedNoticeDashboard) {
+    if (state.isOpen) closedNoticeDashboard.classList.add('hidden');
+    else closedNoticeDashboard.classList.remove('hidden');
+  }
+
+  if (!state.isOpen && state.mode !== 'admin') {
+    if (startTestBtn) {
+      startTestBtn.disabled = true;
+      startTestBtn.textContent = 'Challenge Ditutup';
+    }
+    if (launchArenaBtn) {
+      launchArenaBtn.disabled = true;
+      launchArenaBtn.textContent = 'Maaf, challenge sudah ditutup';
+    }
+  } else if (state.isOpen && state.mode !== 'admin') {
+    if (startTestBtn) {
+      startTestBtn.disabled = false;
+      startTestBtn.textContent = 'Masuk';
+    }
+  }
+}
+
+if (toggleChallengeBtn) {
+  toggleChallengeBtn.addEventListener('click', async () => {
+    const nextStatus = state.isOpen ? 'CLOSED' : 'OPEN';
+    toggleChallengeBtn.disabled = true;
+    toggleChallengeBtn.textContent = 'Menyimpan...';
+
+    try {
+      const res = await fetch(state.apiUrl, {
+        method: 'POST',
+        body: JSON.stringify({ setChallengeStatus: nextStatus })
+      });
+      const json = await res.json();
+      if (json.status === 'success') {
+        state.isOpen = (json.challengeStatus !== 'CLOSED');
+        updateChallengeStatusUI();
+      }
+    } catch (e) {
+      alert('Gagal mengubah status: ' + e.message);
+    } finally {
+      toggleChallengeBtn.disabled = false;
+    }
+  });
+}
+
 function updateSpeedLabels() {
   if (speedUnitLbl) speedUnitLbl.textContent = state.activeUnit.toUpperCase();
   const adminTargetVal = state.activeUnit === 'cpm' 
@@ -150,6 +217,8 @@ async function fetchTargetBenchmark() {
       state.adminCpm = json.adminCpm || Math.round(state.adminWpm * 5);
       state.adminAccuracy = json.adminAccuracy || 0;
       state.adminGhost = json.adminGhost || [];
+      state.isOpen = (json.isOpen !== false);
+      updateChallengeStatusUI();
 
       // Update Login Banner
       if (adminNameLogin) adminNameLogin.textContent = state.adminName;
@@ -253,6 +322,8 @@ async function showHistoryDashboard() {
         state.adminWpm = json.admin.adminWpm || 0;
         state.adminAccuracy = json.admin.adminAccuracy || 0;
         state.adminGhost = json.admin.adminGhost || [];
+        state.isOpen = (json.admin.isOpen !== false);
+        updateChallengeStatusUI();
 
         if (adminNameDashboard) adminNameDashboard.textContent = state.adminName;
         if (adminWpmDashboard) adminWpmDashboard.textContent = `${state.adminWpm} WPM / ${state.adminCpm || Math.round(state.adminWpm * 5)} CPM`;
@@ -525,6 +596,12 @@ async function submitCandidateResult(wpm, cpm, accuracy, duration) {
     });
 
     const json = await res.json();
+
+    if (json.status === 'closed') {
+      resultBanner.className = 'result-banner banner-lost';
+      resultBanner.textContent = json.message || 'Maaf, challenge sudah ditutup';
+      return;
+    }
 
     if (json.status === 'limit_exceeded') {
       resultBanner.className = 'result-banner banner-lost';
