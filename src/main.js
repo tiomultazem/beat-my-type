@@ -380,7 +380,7 @@ async function fetchLeaderboard() {
   } finally {
     if (refreshLeaderboardBtn) {
       refreshLeaderboardBtn.disabled = false;
-      refreshLeaderboardBtn.textContent = 'Segarkan Peringkat';
+      refreshLeaderboardBtn.textContent = 'Refresh';
     }
   }
 }
