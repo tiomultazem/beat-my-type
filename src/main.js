@@ -21,6 +21,7 @@ const state = {
   charIndex: 0,
   keystrokes: [], // [{t: deltaMs, k: key, err: boolean}]
   startTime: null,
+  sessionStartTime: null,
   timerInterval: null,
   ghostInterval: null,
   isFinished: false,
@@ -245,8 +246,26 @@ if (state.mode === 'admin') {
   historyCard.classList.add('hidden');
 }
 
-function checkSavedSession() {
+async function checkSavedSession() {
   if (state.mode === 'admin') return;
+
+  // Cek apakah ada sesi tes aktif yang terputus (di-refresh atau ditutup paksa)
+  const activeSessionStr = localStorage.getItem('BMT_ACTIVE_SESSION');
+  if (activeSessionStr) {
+    try {
+      const active = JSON.parse(activeSessionStr);
+      if (active && active.candidateId) {
+        state.candidateId = active.candidateId;
+        state.candidateName = active.candidateName || 'Penantang';
+        localStorage.removeItem('BMT_ACTIVE_SESSION');
+        localStorage.removeItem(`BMT_HIST_${state.candidateId}`);
+        await penalizeAbandonedSession(active);
+      }
+    } catch (e) {
+      localStorage.removeItem('BMT_ACTIVE_SESSION');
+    }
+  }
+
   const saved = localStorage.getItem('BMT_USER_SESSION');
   if (saved) {
     try {
@@ -259,6 +278,35 @@ function checkSavedSession() {
     } catch (e) {
       localStorage.removeItem('BMT_USER_SESSION');
     }
+  }
+}
+
+async function penalizeAbandonedSession(active) {
+  const duration = Math.max(1, Math.round(((active.lastUpdate || Date.now()) - active.startTime) / 1000));
+  const chars = active.charIndex || 0;
+  const wpm = Math.round(((chars / 5) / (duration / 60)));
+  const cpm = Math.round((chars / duration) * 60);
+  const totalKeys = (active.keystrokes || []).length;
+  const accuracy = totalKeys === 0 ? 0 : Math.max(0, Math.round(((totalKeys - (active.totalErrors || 0)) / totalKeys) * 100));
+
+  try {
+    await fetch(state.apiUrl, {
+      method: 'POST',
+      body: JSON.stringify({
+        candidateId: active.candidateId,
+        candidateName: active.candidateName,
+        textTyped: state.targetText || active.targetText || '',
+        wpm: wpm,
+        cpm: cpm,
+        accuracy: accuracy,
+        durationSeconds: duration,
+        keystrokes: active.keystrokes || [],
+        isForfeit: true
+      })
+    });
+    alert(`Sesi tes sebelumnya terputus atau di-refresh!\n\nPercobaan tercatat apa adanya (${wpm} WPM / ${cpm} CPM, Akurasi: ${accuracy}%, Durasi: ${duration}s).\nSisa kesempatan Anda berkurang 1.`);
+  } catch (err) {
+    console.error('Gagal mencatat penalti refresh:', err);
   }
 }
 
@@ -339,7 +387,7 @@ async function showHistoryDashboard() {
         launchArenaBtn.textContent = 'Batas Kesempatan Hari Ini Habis';
       } else {
         launchArenaBtn.disabled = false;
-        launchArenaBtn.textContent = 'Mulai Tes Sekarang';
+        launchArenaBtn.textContent = 'Mulai tantang admin!';
       }
 
       renderHistory(json.history);
@@ -371,7 +419,7 @@ function renderHistory(items) {
         <div class="text-muted" style="font-size:0.75rem">${it.date} ${it.isToday ? '(Hari Ini)' : ''}</div>
       </div>
       <span class="${it.status === 'BEAT_ADMIN' ? 'status-win' : 'status-lost'}">
-        ${it.status === 'BEAT_ADMIN' ? 'MENANG' : 'KALAH'}
+        ${it.status === 'BEAT_ADMIN' ? 'MENANG' : (it.status === 'FORFEIT' ? 'HANGUS (REFRESH)' : 'KALAH')}
       </span>
     </div>
   `;
@@ -385,6 +433,21 @@ launchArenaBtn.addEventListener('click', () => {
   }
   historyCard.classList.add('hidden');
   arenaCard.classList.remove('hidden');
+
+  // Kunci sesi aktif ke localStorage untuk deteksi refresh
+  const now = Date.now();
+  state.sessionStartTime = now;
+  localStorage.setItem('BMT_ACTIVE_SESSION', JSON.stringify({
+    candidateId: state.candidateId,
+    candidateName: state.candidateName,
+    targetText: state.targetText,
+    startTime: now,
+    lastUpdate: now,
+    charIndex: 0,
+    totalErrors: 0,
+    keystrokes: []
+  }));
+
   setupArena();
 });
 
@@ -458,6 +521,7 @@ function handleKeydown(e) {
       charSpans[state.charIndex].className = 'char cursor';
       state.keystrokes.push({ t: Math.round(now - state.startTime), k: 'Backspace', err: false });
       updateStats();
+      saveSessionProgress();
     }
     return;
   }
@@ -479,11 +543,27 @@ function handleKeydown(e) {
     }
 
     updateStats();
+    saveSessionProgress();
 
     if (state.charIndex >= state.targetText.length) {
       finishTest();
     }
   }
+}
+
+function saveSessionProgress() {
+  if (state.mode !== 'challenger' || state.isFinished) return;
+  const active = {
+    candidateId: state.candidateId,
+    candidateName: state.candidateName,
+    targetText: state.targetText,
+    startTime: state.sessionStartTime || Date.now(),
+    lastUpdate: Date.now(),
+    charIndex: state.charIndex,
+    totalErrors: state.totalErrors,
+    keystrokes: state.keystrokes
+  };
+  localStorage.setItem('BMT_ACTIVE_SESSION', JSON.stringify(active));
 }
 
 function updateStats() {
@@ -528,6 +608,7 @@ async function finishTest() {
   state.isFinished = true;
   clearInterval(state.timerInterval);
   clearInterval(state.ghostInterval);
+  localStorage.removeItem('BMT_ACTIVE_SESSION');
 
   const duration = Math.max(1, Math.round((performance.now() - state.startTime) / 1000));
   const finalWpm = Math.round(((state.targetText.length / 5) / (duration / 60)));
@@ -631,4 +712,13 @@ async function submitCandidateResult(wpm, cpm, accuracy, duration) {
 closeModalBtn.addEventListener('click', () => {
   resultModal.classList.add('hidden');
   location.reload();
+});
+
+// Peringatan sebelum reload/tutup halaman saat tes berjalan
+window.addEventListener('beforeunload', (e) => {
+  if (state.mode === 'challenger' && !state.isFinished && localStorage.getItem('BMT_ACTIVE_SESSION')) {
+    e.preventDefault();
+    e.returnValue = 'Tes sedang berlangsung! Jika halaman ditutup atau di-refresh, kesempatan Anda akan hangus.';
+    return e.returnValue;
+  }
 });
