@@ -116,6 +116,35 @@
         <input type="text" id="adminNameInput" placeholder="Nama Anda (Admin/Pemilik Rekor)" style="margin-bottom: 12px;">
         <textarea id="customTargetText" placeholder="Masukkan teks benchmark di sini..."></textarea>
         <button id="setAdminBenchmarkBtn" class="btn-warning">Mulai Rekam Benchmark Saya</button>
+
+        <!-- PAPAN PERINGKAT KANDIDAT (LEADERBOARD) -->
+        <div class="admin-leaderboard-section">
+          <div class="leaderboard-header">
+            <h3>Papan Peringkat Kandidat (Skor Tertinggi Unik)</h3>
+            <button type="button" id="refreshLeaderboardBtn" class="btn-sm">Segarkan Peringkat</button>
+          </div>
+          <p class="text-muted" style="font-size: 0.8rem; margin: 4px 0 14px 0;">
+            Hierarki Pemeringkatan: Akurasi (tertinggi) &rarr; CPM (tertinggi) &rarr; Durasi (tercepat). Hanya menampilkan 1 rekor terbaik per email.
+          </p>
+          <div class="table-responsive">
+            <table class="leaderboard-table">
+              <thead>
+                <tr>
+                  <th style="width: 45px; text-align: center;">#</th>
+                  <th>Nama Kandidat</th>
+                  <th>Email</th>
+                  <th style="text-align: right;">Akurasi</th>
+                  <th style="text-align: right;">Kecepatan</th>
+                  <th style="text-align: right;">Durasi</th>
+                  <th style="text-align: center;">Tanggal</th>
+                </tr>
+              </thead>
+              <tbody id="leaderboardTbody">
+                <tr><td colspan="7" class="text-muted" style="text-align: center; padding: 16px;">Memuat data papan peringkat...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </section>
 
