@@ -16,9 +16,9 @@ const state = {
   candidateId: '',
   candidateName: '',
   targetText: '',
-  adminWpm: 0,
-  adminCpm: 0,
-  adminAccuracy: 0,
+  adminWpm: parseInt(localStorage.getItem('BMT_ADMIN_WPM'), 10) || 0,
+  adminCpm: parseInt(localStorage.getItem('BMT_ADMIN_CPM'), 10) || 0,
+  adminAccuracy: parseInt(localStorage.getItem('BMT_ADMIN_ACC'), 10) || 0,
   adminGhost: [],
   charIndex: 0,
   keystrokes: [], // [{t: deltaMs, k: key, err: boolean}]
@@ -403,8 +403,9 @@ function renderLeaderboardTable(items) {
       ? `${it.cpm} CPM <span class="text-muted">(${it.wpm} WPM)</span>`
       : `${it.wpm} WPM <span class="text-muted">(${it.cpm} CPM)</span>`;
 
+    const hasAdminBenchmark = (state.adminCpm > 0 && state.adminAccuracy > 0);
     const isBeatAdmin = (it.status === 'BEAT_ADMIN') || 
-      (it.cpm > (state.adminCpm || 0) && it.accuracy >= (state.adminAccuracy || 0) && it.accuracy >= 90);
+      (hasAdminBenchmark && it.cpm > state.adminCpm && it.accuracy >= state.adminAccuracy && it.accuracy >= 90);
 
     return `
       <tr class="${isBeatAdmin ? 'row-beat-admin' : ''}">
@@ -451,6 +452,9 @@ async function fetchTargetBenchmark() {
       state.adminWpm = json.adminWpm || 0;
       state.adminCpm = json.adminCpm || Math.round(state.adminWpm * 5);
       state.adminAccuracy = json.adminAccuracy || 0;
+      localStorage.setItem('BMT_ADMIN_WPM', String(state.adminWpm));
+      localStorage.setItem('BMT_ADMIN_CPM', String(state.adminCpm));
+      localStorage.setItem('BMT_ADMIN_ACC', String(state.adminAccuracy));
       state.adminGhost = json.adminGhost || [];
       state.isOpen = (json.isOpen !== false);
       localStorage.setItem('BMT_IS_OPEN', state.isOpen ? 'true' : 'false');
@@ -470,6 +474,10 @@ async function fetchTargetBenchmark() {
       if (adminAccDashboard) adminAccDashboard.textContent = state.adminAccuracy;
       if (adminNameDisplay) adminNameDisplay.textContent = state.adminName;
       updateSpeedLabels();
+
+      if (currentLeaderboardData && currentLeaderboardData.length > 0) {
+        renderLeaderboardTable(currentLeaderboardData);
+      }
     }
   } catch (err) {
     console.error('Gagal mengambil target admin:', err);
@@ -723,6 +731,9 @@ async function showHistoryDashboard() {
         state.adminWpm = json.admin.adminWpm || 0;
         state.adminCpm = json.admin.adminCpm || Math.round(state.adminWpm * 5);
         state.adminAccuracy = json.admin.adminAccuracy || 0;
+        localStorage.setItem('BMT_ADMIN_WPM', String(state.adminWpm));
+        localStorage.setItem('BMT_ADMIN_CPM', String(state.adminCpm));
+        localStorage.setItem('BMT_ADMIN_ACC', String(state.adminAccuracy));
         state.adminGhost = json.admin.adminGhost || [];
         state.isOpen = (json.admin.isOpen !== false);
         localStorage.setItem('BMT_IS_OPEN', state.isOpen ? 'true' : 'false');
