@@ -283,10 +283,50 @@ button:hover {
   margin-top: 8px;
 }
 
-.error-text {
-  color: var(--danger);
+/* CLOSED BANNER NOTICE */
+.closed-banner {
+  background: rgba(239, 68, 68, 0.2);
+  border: 1px solid var(--danger);
+  color: #ff6b6b;
+  padding: 12px 16px;
+  border-radius: 6px;
+  font-weight: bold;
+  text-align: center;
+  margin-bottom: 16px;
+  font-size: 0.95rem;
+}
+
+/* ADMIN PANEL HEADER & STATUS TOGGLE */
+.admin-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.admin-panel-header h2 {
+  margin: 0;
+}
+
+.admin-status-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   font-size: 0.85rem;
-  margin-top: 8px;
+}
+
+.status-open {
+  background: var(--primary) !important;
+  color: #000 !important;
+  font-weight: bold;
+}
+
+.status-closed {
+  background: var(--danger) !important;
+  color: #fff !important;
+  font-weight: bold;
 }
 
 /* TARGET BANNER CARD */
