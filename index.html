@@ -87,17 +87,29 @@
 
     <!-- ADMIN SETUP PANEL (Hanya muncul jika mode=admin) -->
     <section id="adminPanel" class="card hidden">
-      <div class="admin-panel-header">
-        <h2>Panel Admin: Buat Benchmark Target</h2>
-        <div class="admin-status-toggle">
-          <span>Status Tantangan:</span>
-          <input type="password" id="adminPinInput" class="pin-input-inline" placeholder="PIN (6 digit)" maxlength="6" autocomplete="off">
-          <button type="button" id="toggleChallengeBtn" class="btn-sm status-open">Buka (OPEN)</button>
+      <!-- GERBANG AUTENTIKASI PIN ADMIN -->
+      <div id="adminPinGate" class="admin-pin-gate">
+        <h2>Autentikasi Mode Admin</h2>
+        <p class="text-muted" style="margin-bottom: 16px;">Masukkan 6 digit PIN Admin untuk mengakses kendali benchmark &amp; status:</p>
+        <div class="pin-gate-input-wrapper">
+          <input type="password" id="gatePinInput" maxlength="6" placeholder="• • • • • •" autocomplete="off" class="pin-gate-input">
         </div>
+        <p id="gatePinError" class="error-text" style="margin-top: 10px;"></p>
       </div>
-      <input type="text" id="adminNameInput" placeholder="Nama Anda (Admin/Pemilik Rekor)" style="margin-bottom: 12px;">
-      <textarea id="customTargetText" placeholder="Masukkan teks benchmark di sini..."></textarea>
-      <button id="setAdminBenchmarkBtn" class="btn-warning">Mulai Rekam Benchmark Saya</button>
+
+      <!-- KONTEN PANEL ADMIN (Terbuka setelah PIN valid) -->
+      <div id="adminPanelContent" class="hidden">
+        <div class="admin-panel-header">
+          <h2>Panel Admin: Buat Benchmark Target</h2>
+          <div class="admin-status-toggle">
+            <span>Status Tantangan:</span>
+            <button type="button" id="toggleChallengeBtn" class="btn-sm status-open">Buka (OPEN)</button>
+          </div>
+        </div>
+        <input type="text" id="adminNameInput" placeholder="Nama Anda (Admin/Pemilik Rekor)" style="margin-bottom: 12px;">
+        <textarea id="customTargetText" placeholder="Masukkan teks benchmark di sini..."></textarea>
+        <button id="setAdminBenchmarkBtn" class="btn-warning">Mulai Rekam Benchmark Saya</button>
+      </div>
     </section>
 
     <!-- ARENA PENGETIKAN -->
