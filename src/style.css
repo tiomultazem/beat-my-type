@@ -172,10 +172,42 @@ button:hover {
 }
 
 /* STATS BAR */
+.stats-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
 .stats-bar {
   display: flex;
   gap: 24px;
-  margin-bottom: 16px;
+}
+
+.unit-toggle-group {
+  display: flex;
+  background: var(--bg-color);
+  border: 1px solid var(--card-border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.unit-btn {
+  background: transparent;
+  color: var(--text-muted);
+  border: none;
+  padding: 6px 14px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.unit-btn.active {
+  background: var(--primary);
+  color: #000;
 }
 
 .stat-item {
