@@ -21,6 +21,8 @@
 
     <!-- IDENTITAS PESERTA (LOGIN) -->
     <section id="identityCard" class="card">
+      <div id="closedNoticeLogin" class="closed-banner hidden">Maaf, challenge sudah ditutup</div>
+
       <div id="loginAdminBanner" class="target-card">
         <span class="target-label">Target yang Harus Dikalahkan:</span>
         <div class="target-stats">
@@ -41,6 +43,8 @@
 
     <!-- DASHBOARD RIWAYAT PENANTANG -->
     <section id="historyCard" class="card hidden">
+      <div id="closedNoticeDashboard" class="closed-banner hidden">Maaf, challenge sudah ditutup</div>
+
       <div class="history-header">
         <div>
           <h2 id="welcomeText">Halo, Penantang</h2>
@@ -71,7 +75,13 @@
 
     <!-- ADMIN SETUP PANEL (Hanya muncul jika mode=admin) -->
     <section id="adminPanel" class="card hidden">
-      <h2>Panel Admin: Buat Benchmark Target</h2>
+      <div class="admin-panel-header">
+        <h2>Panel Admin: Buat Benchmark Target</h2>
+        <div class="admin-status-toggle">
+          <span>Status Tantangan:</span>
+          <button type="button" id="toggleChallengeBtn" class="btn-sm status-open">Buka (OPEN)</button>
+        </div>
+      </div>
       <input type="text" id="adminNameInput" placeholder="Nama Anda (Admin/Pemilik Rekor)" style="margin-bottom: 12px;">
       <textarea id="customTargetText" placeholder="Masukkan teks benchmark di sini..."></textarea>
       <button id="setAdminBenchmarkBtn" class="btn-warning">Mulai Rekam Benchmark Saya</button>
