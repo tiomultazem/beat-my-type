@@ -9,8 +9,9 @@ const state = {
   apiUrl: DEFAULT_API_URL,
   mode: new URLSearchParams(window.location.search).get('mode') === 'admin' ? 'admin' : 'challenger',
   activeUnit: localStorage.getItem('BMT_UNIT') || 'wpm',
-  isOpen: true,
+  isOpen: localStorage.getItem('BMT_IS_OPEN') !== 'false',
   adminName: 'Admin',
+  adminPin: '',
   candidateId: '',
   candidateName: '',
   targetText: '',
@@ -50,6 +51,7 @@ const candidateIdInput = document.getElementById('candidateId');
 const candidateNameInput = document.getElementById('candidateName');
 const startTestBtn = document.getElementById('startTestBtn');
 const candidateError = document.getElementById('candidateError');
+const adminPinInput = document.getElementById('adminPinInput');
 const adminNameInput = document.getElementById('adminNameInput');
 const toggleChallengeBtn = document.getElementById('toggleChallengeBtn');
 const closedNoticeLogin = document.getElementById('closedNoticeLogin');
@@ -135,6 +137,7 @@ unitButtons.forEach(btn => {
   else btn.classList.remove('active');
 });
 updateSpeedLabels();
+updateChallengeStatusUI();
 
 function updateChallengeStatusUI() {
   if (state.mode === 'admin' && toggleChallengeBtn) {
@@ -158,44 +161,96 @@ function updateChallengeStatusUI() {
     else closedNoticeDashboard.classList.remove('hidden');
   }
 
-  if (!state.isOpen && state.mode !== 'admin') {
-    if (startTestBtn) {
-      startTestBtn.disabled = true;
-      startTestBtn.textContent = 'Challenge Ditutup';
-    }
-    if (launchArenaBtn) {
-      launchArenaBtn.disabled = true;
-      launchArenaBtn.textContent = 'Maaf, challenge sudah ditutup';
-    }
-  } else if (state.isOpen && state.mode !== 'admin') {
-    if (startTestBtn) {
-      startTestBtn.disabled = false;
-      startTestBtn.textContent = 'Masuk';
+  if (state.mode !== 'admin') {
+    if (!state.isOpen) {
+      if (startTestBtn) {
+        startTestBtn.disabled = true;
+        startTestBtn.textContent = 'Challenge Ditutup';
+      }
+      if (launchArenaBtn) {
+        launchArenaBtn.disabled = true;
+        launchArenaBtn.textContent = 'Maaf, challenge sudah ditutup';
+      }
+    } else {
+      if (startTestBtn) {
+        startTestBtn.disabled = false;
+        startTestBtn.textContent = 'Masuk';
+      }
+      const attemptsLeft = parseInt(quotaRemaining ? quotaRemaining.textContent : '3', 10);
+      if (launchArenaBtn) {
+        if (!isNaN(attemptsLeft) && attemptsLeft <= 0) {
+          launchArenaBtn.disabled = true;
+          launchArenaBtn.textContent = 'Batas Kesempatan Hari Ini Habis';
+        } else {
+          launchArenaBtn.disabled = false;
+          launchArenaBtn.textContent = 'Mulai tantang admin!';
+        }
+      }
     }
   }
 }
 
-if (toggleChallengeBtn) {
-  toggleChallengeBtn.addEventListener('click', async () => {
-    const nextStatus = state.isOpen ? 'CLOSED' : 'OPEN';
+async function executeToggleChallenge(pin) {
+  if (!pin) {
+    if (adminPinInput) adminPinInput.focus();
+    return;
+  }
+  const nextStatus = state.isOpen ? 'CLOSED' : 'OPEN';
+  if (toggleChallengeBtn) {
     toggleChallengeBtn.disabled = true;
     toggleChallengeBtn.textContent = 'Menyimpan...';
+  }
 
-    try {
-      const res = await fetch(state.apiUrl, {
-        method: 'POST',
-        body: JSON.stringify({ setChallengeStatus: nextStatus })
-      });
-      const json = await res.json();
-      if (json.status === 'success') {
-        state.isOpen = (json.challengeStatus !== 'CLOSED');
-        updateChallengeStatusUI();
+  try {
+    const res = await fetch(state.apiUrl, {
+      method: 'POST',
+      body: JSON.stringify({ setChallengeStatus: nextStatus, adminPin: pin })
+    });
+    const json = await res.json();
+    if (json.status === 'success') {
+      state.isOpen = (json.challengeStatus !== 'CLOSED');
+      localStorage.setItem('BMT_IS_OPEN', state.isOpen ? 'true' : 'false');
+      updateChallengeStatusUI();
+    } else {
+      alert(json.message || 'Gagal mengubah status: PIN salah.');
+      if (adminPinInput) {
+        adminPinInput.value = '';
+        adminPinInput.focus();
       }
-    } catch (e) {
-      alert('Gagal mengubah status: ' + e.message);
-    } finally {
-      toggleChallengeBtn.disabled = false;
     }
+  } catch (e) {
+    alert('Gagal mengubah status: ' + e.message);
+  } finally {
+    if (toggleChallengeBtn) toggleChallengeBtn.disabled = false;
+  }
+}
+
+if (adminPinInput) {
+  adminPinInput.addEventListener('input', () => {
+    const pin = adminPinInput.value.trim();
+    // Begitu angka terakhir (digit ke-6) diketik: langsung submit tanpa perlu tekan Enter
+    if (pin.length === 6) {
+      executeToggleChallenge(pin);
+    }
+  });
+
+  adminPinInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      const pin = adminPinInput.value.trim();
+      if (pin) executeToggleChallenge(pin);
+    }
+  });
+}
+
+if (toggleChallengeBtn) {
+  toggleChallengeBtn.addEventListener('click', () => {
+    const pin = adminPinInput ? adminPinInput.value.trim() : '';
+    if (pin.length < 6) {
+      alert('Harap ketik 6 digit PIN Admin terlebih dahulu!');
+      if (adminPinInput) adminPinInput.focus();
+      return;
+    }
+    executeToggleChallenge(pin);
   });
 }
 
@@ -219,6 +274,7 @@ async function fetchTargetBenchmark() {
       state.adminAccuracy = json.adminAccuracy || 0;
       state.adminGhost = json.adminGhost || [];
       state.isOpen = (json.isOpen !== false);
+      localStorage.setItem('BMT_IS_OPEN', state.isOpen ? 'true' : 'false');
       updateChallengeStatusUI();
 
       // Update Login Banner
@@ -372,10 +428,11 @@ async function showHistoryDashboard() {
         state.adminAccuracy = json.admin.adminAccuracy || 0;
         state.adminGhost = json.admin.adminGhost || [];
         state.isOpen = (json.admin.isOpen !== false);
+        localStorage.setItem('BMT_IS_OPEN', state.isOpen ? 'true' : 'false');
         updateChallengeStatusUI();
 
         if (adminNameDashboard) adminNameDashboard.textContent = state.adminName;
-        if (adminWpmDashboard) adminWpmDashboard.textContent = `${state.adminWpm} WPM / ${state.adminCpm || Math.round(state.adminWpm * 5)} CPM`;
+        if (adminWpmDashboard) adminWpmDashboard.textContent = `${state.adminWpm} WPM / ${state.adminCpm} CPM`;
         if (adminAccDashboard) adminAccDashboard.textContent = state.adminAccuracy;
         if (adminNameDisplay) adminNameDisplay.textContent = state.adminName;
         if (adminWpmDisplay) adminWpmDisplay.textContent = state.adminWpm;
@@ -383,13 +440,7 @@ async function showHistoryDashboard() {
 
       // Perbarui Kuota dan Riwayat
       quotaRemaining.textContent = json.attemptsRemaining;
-      if (json.attemptsRemaining <= 0) {
-        launchArenaBtn.disabled = true;
-        launchArenaBtn.textContent = 'Batas Kesempatan Hari Ini Habis';
-      } else {
-        launchArenaBtn.disabled = false;
-        launchArenaBtn.textContent = 'Mulai tantang admin!';
-      }
+      updateChallengeStatusUI();
 
       renderHistory(json.history);
 
@@ -428,6 +479,10 @@ function renderHistory(items) {
 }
 
 launchArenaBtn.addEventListener('click', () => {
+  if (!state.isOpen && state.mode !== 'admin') {
+    alert('Maaf, challenge sudah ditutup oleh Admin!');
+    return;
+  }
   if (!state.targetText) {
     alert('Target admin belum ditetapkan di spreadsheet!');
     return;
@@ -454,6 +509,12 @@ launchArenaBtn.addEventListener('click', () => {
 
 // Admin Benchmark Trigger
 setAdminBenchmarkBtn.addEventListener('click', () => {
+  const pin = adminPinInput ? adminPinInput.value.trim() : '';
+  if (!pin || pin.length < 6) {
+    alert('Harap masukkan 6 digit PIN Admin terlebih dahulu!');
+    if (adminPinInput) adminPinInput.focus();
+    return;
+  }
   const text = customTargetText.value.trim();
   const name = adminNameInput.value.trim() || 'Admin';
   if (!text) {
@@ -462,6 +523,7 @@ setAdminBenchmarkBtn.addEventListener('click', () => {
   }
   state.targetText = text;
   state.adminName = name;
+  state.adminPin = pin;
   adminPanel.classList.add('hidden');
   arenaCard.classList.remove('hidden');
   setupArena();
@@ -503,6 +565,7 @@ function setupArena() {
 hiddenInput.addEventListener('keydown', handleKeydown);
 
 function handleKeydown(e) {
+  if (!e.isTrusted) return;
   if (state.isFinished) return;
   if (['Shift', 'Control', 'Alt', 'Meta', 'CapsLock', 'Tab'].includes(e.key)) return;
 
@@ -637,10 +700,11 @@ async function submitAdminBenchmark(wpm, cpm, accuracy, duration) {
   resultModal.classList.remove('hidden');
 
   try {
-    await fetch(state.apiUrl, {
+    const res = await fetch(state.apiUrl, {
       method: 'POST',
       body: JSON.stringify({
         isAdminBenchmark: true,
+        adminPin: state.adminPin || (adminPinInput ? adminPinInput.value.trim() : ''),
         adminName: state.adminName,
         targetText: state.targetText,
         wpm: wpm,
@@ -650,6 +714,11 @@ async function submitAdminBenchmark(wpm, cpm, accuracy, duration) {
         keystrokes: state.keystrokes
       })
     });
+    const json = await res.json();
+    if (json.status === 'error') {
+      resultBanner.className = 'result-banner banner-lost';
+      resultBanner.textContent = json.message || 'Gagal menyimpan benchmark.';
+    }
   } catch (err) {
     alert('Gagal mengirim benchmark ke Apps Script: ' + err.message);
   }
