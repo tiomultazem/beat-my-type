@@ -8,11 +8,13 @@ const DEFAULT_API_URL = 'https://script.google.com/macros/s/AKfycby0vtuSERXWlNXM
 const state = {
   apiUrl: DEFAULT_API_URL,
   mode: new URLSearchParams(window.location.search).get('mode') === 'admin' ? 'admin' : 'challenger',
+  activeUnit: localStorage.getItem('BMT_UNIT') || 'wpm',
   adminName: 'Admin',
   candidateId: '',
   candidateName: '',
   targetText: '',
   adminWpm: 0,
+  adminCpm: 0,
   adminAccuracy: 0,
   adminGhost: [],
   charIndex: 0,
@@ -55,9 +57,11 @@ const adminProgress = document.getElementById('adminProgress');
 const userProgress = document.getElementById('userProgress');
 const adminNameDisplay = document.getElementById('adminNameDisplay');
 const adminWpmDisplay = document.getElementById('adminWpmDisplay');
-const liveWpm = document.getElementById('liveWpm');
+const liveSpeed = document.getElementById('liveSpeed');
+const speedUnitLbl = document.getElementById('speedUnitLbl');
 const liveAcc = document.getElementById('liveAcc');
 const liveTime = document.getElementById('liveTime');
+const unitButtons = document.querySelectorAll('.unit-btn');
 const resultModal = document.getElementById('resultModal');
 const resultBanner = document.getElementById('resultBanner');
 const resUserWpm = document.getElementById('resUserWpm');
@@ -96,8 +100,32 @@ function initUpdateChecker() {
 // Fetch Benchmark Target globally
 fetchTargetBenchmark();
 
-// Init Session Cache
-checkSavedSession();
+// Unit Toggle Handler
+unitButtons.forEach(btn => {
+  btn.addEventListener('click', () => {
+    unitButtons.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    state.activeUnit = btn.dataset.unit;
+    localStorage.setItem('BMT_UNIT', state.activeUnit);
+    updateSpeedLabels();
+    updateStats();
+  });
+});
+
+// Set initial unit active state
+unitButtons.forEach(btn => {
+  if (btn.dataset.unit === state.activeUnit) btn.classList.add('active');
+  else btn.classList.remove('active');
+});
+updateSpeedLabels();
+
+function updateSpeedLabels() {
+  if (speedUnitLbl) speedUnitLbl.textContent = state.activeUnit.toUpperCase();
+  const adminTargetVal = state.activeUnit === 'cpm' 
+    ? (state.adminCpm || Math.round(state.adminWpm * 5)) 
+    : state.adminWpm;
+  if (adminWpmDisplay) adminWpmDisplay.textContent = adminTargetVal;
+}
 
 async function fetchTargetBenchmark() {
   try {
@@ -107,20 +135,21 @@ async function fetchTargetBenchmark() {
       state.targetText = json.targetText || '';
       state.adminName = json.adminName || 'Admin';
       state.adminWpm = json.adminWpm || 0;
+      state.adminCpm = json.adminCpm || Math.round(state.adminWpm * 5);
       state.adminAccuracy = json.adminAccuracy || 0;
       state.adminGhost = json.adminGhost || [];
 
       // Update Login Banner
       if (adminNameLogin) adminNameLogin.textContent = state.adminName;
-      if (adminWpmLogin) adminWpmLogin.textContent = state.adminWpm;
+      if (adminWpmLogin) adminWpmLogin.textContent = `${state.adminWpm} WPM / ${state.adminCpm} CPM`;
       if (adminAccLogin) adminAccLogin.textContent = state.adminAccuracy;
 
       // Update Dashboard & Race Display
       if (adminNameDashboard) adminNameDashboard.textContent = state.adminName;
-      if (adminWpmDashboard) adminWpmDashboard.textContent = state.adminWpm;
+      if (adminWpmDashboard) adminWpmDashboard.textContent = `${state.adminWpm} WPM / ${state.adminCpm} CPM`;
       if (adminAccDashboard) adminAccDashboard.textContent = state.adminAccuracy;
       if (adminNameDisplay) adminNameDisplay.textContent = state.adminName;
-      if (adminWpmDisplay) adminWpmDisplay.textContent = state.adminWpm;
+      updateSpeedLabels();
     }
   } catch (err) {
     console.error('Gagal mengambil target admin:', err);
@@ -250,17 +279,20 @@ function renderHistory(items) {
     historyList.innerHTML = '<p class="text-muted">Belum ada riwayat percobaan.</p>';
     return;
   }
-  historyList.innerHTML = items.map(it => `
+  historyList.innerHTML = items.map(it => {
+    const cpmVal = it.cpm !== undefined ? it.cpm : Math.round(it.wpm * 5);
+    return `
     <div class="history-item">
       <div>
-        <strong>${it.wpm} WPM</strong> | Akurasi: ${it.accuracy}% | Durasi: ${it.duration}s
+        <strong>${it.wpm} WPM</strong> <span class="text-muted">(${cpmVal} CPM)</span> | Akurasi: ${it.accuracy}% | Durasi: ${it.duration}s
         <div class="text-muted" style="font-size:0.75rem">${it.date} ${it.isToday ? '(Hari Ini)' : ''}</div>
       </div>
       <span class="${it.status === 'BEAT_ADMIN' ? 'status-win' : 'status-lost'}">
         ${it.status === 'BEAT_ADMIN' ? 'MENANG' : 'KALAH'}
       </span>
     </div>
-  `).join('');
+  `;
+  }).join('');
 }
 
 launchArenaBtn.addEventListener('click', () => {
@@ -297,9 +329,10 @@ function setupArena() {
   state.totalErrors = 0;
   userProgress.style.width = '0%';
   adminProgress.style.width = '0%';
-  liveWpm.textContent = '0';
+  if (liveSpeed) liveSpeed.textContent = '0';
   liveAcc.textContent = '100%';
   liveTime.textContent = '0s';
+  updateSpeedLabels();
 
   for (let i = 0; i < state.targetText.length; i++) {
     const span = document.createElement('span');
@@ -376,10 +409,13 @@ function updateStats() {
   if (elapsedSeconds <= 0) return;
 
   const currentWpm = Math.round(((state.charIndex / 5) / (elapsedSeconds / 60)));
+  const currentCpm = Math.round((state.charIndex / elapsedSeconds) * 60);
   const totalTyped = state.keystrokes.length;
   const accuracy = totalTyped === 0 ? 100 : Math.max(0, Math.round(((totalTyped - state.totalErrors) / totalTyped) * 100));
 
-  liveWpm.textContent = currentWpm;
+  if (liveSpeed) {
+    liveSpeed.textContent = state.activeUnit === 'cpm' ? currentCpm : currentWpm;
+  }
   liveAcc.textContent = `${accuracy}%`;
   liveTime.textContent = `${Math.floor(elapsedSeconds)}s`;
 
@@ -412,25 +448,26 @@ async function finishTest() {
 
   const duration = Math.max(1, Math.round((performance.now() - state.startTime) / 1000));
   const finalWpm = Math.round(((state.targetText.length / 5) / (duration / 60)));
+  const finalCpm = Math.round((state.targetText.length / duration) * 60);
   const totalKeys = state.keystrokes.length;
   const finalAccuracy = totalKeys === 0 ? 100 : Math.max(0, Math.round(((totalKeys - state.totalErrors) / totalKeys) * 100));
 
-  resUserWpm.textContent = finalWpm;
+  resUserWpm.textContent = `${finalWpm} WPM (${finalCpm} CPM)`;
   resAccuracy.textContent = `${finalAccuracy}%`;
   resDuration.textContent = `${duration}s`;
 
   if (state.mode === 'admin') {
-    await submitAdminBenchmark(finalWpm, finalAccuracy, duration);
+    await submitAdminBenchmark(finalWpm, finalCpm, finalAccuracy, duration);
   } else {
-    await submitCandidateResult(finalWpm, finalAccuracy, duration);
+    await submitCandidateResult(finalWpm, finalCpm, finalAccuracy, duration);
   }
 }
 
-async function submitAdminBenchmark(wpm, accuracy, duration) {
+async function submitAdminBenchmark(wpm, cpm, accuracy, duration) {
   resultTitle.textContent = 'Benchmark Admin Tersimpan';
   resultBanner.className = 'result-banner banner-win';
-  resultBanner.textContent = `Target ${state.adminName} (${wpm} WPM) berhasil ditetapkan!`;
-  resAdminWpm.textContent = wpm;
+  resultBanner.textContent = `Target ${state.adminName} (${wpm} WPM / ${cpm} CPM) berhasil ditetapkan!`;
+  resAdminWpm.textContent = `${wpm} WPM (${cpm} CPM)`;
   resAttempts.textContent = 'Unlimited (Admin)';
   resultModal.classList.remove('hidden');
 
@@ -442,6 +479,7 @@ async function submitAdminBenchmark(wpm, accuracy, duration) {
         adminName: state.adminName,
         targetText: state.targetText,
         wpm: wpm,
+        cpm: cpm,
         accuracy: accuracy,
         durationSeconds: duration,
         keystrokes: state.keystrokes
@@ -452,8 +490,9 @@ async function submitAdminBenchmark(wpm, accuracy, duration) {
   }
 }
 
-async function submitCandidateResult(wpm, accuracy, duration) {
-  resAdminWpm.textContent = state.adminWpm;
+async function submitCandidateResult(wpm, cpm, accuracy, duration) {
+  const adminCpmVal = state.adminCpm || Math.round(state.adminWpm * 5);
+  resAdminWpm.textContent = `${state.adminWpm} WPM (${adminCpmVal} CPM)`;
   resultModal.classList.remove('hidden');
   resultBanner.className = 'result-banner';
   resultBanner.textContent = 'Memverifikasi hasil di server...';
@@ -466,6 +505,7 @@ async function submitCandidateResult(wpm, accuracy, duration) {
         candidateName: state.candidateName,
         textTyped: state.targetText,
         wpm: wpm,
+        cpm: cpm,
         accuracy: accuracy,
         durationSeconds: duration,
         keystrokes: state.keystrokes
