@@ -255,7 +255,7 @@ async function showHistoryDashboard() {
         state.adminGhost = json.admin.adminGhost || [];
 
         if (adminNameDashboard) adminNameDashboard.textContent = state.adminName;
-        if (adminWpmDashboard) adminWpmDashboard.textContent = state.adminWpm;
+        if (adminWpmDashboard) adminWpmDashboard.textContent = `${state.adminWpm} WPM / ${state.adminCpm || Math.round(state.adminWpm * 5)} CPM`;
         if (adminAccDashboard) adminAccDashboard.textContent = state.adminAccuracy;
         if (adminNameDisplay) adminNameDisplay.textContent = state.adminName;
         if (adminWpmDisplay) adminWpmDisplay.textContent = state.adminWpm;
