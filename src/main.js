@@ -470,20 +470,110 @@ async function penalizeAbandonedSession(active) {
   }
 }
 
-// Login
-startTestBtn.addEventListener('click', () => {
+// Alur Autentikasi Dua Tahap (Email -> Nama Lengkap jika Baru)
+async function handleLoginStep() {
   const cid = candidateIdInput.value.trim().toLowerCase();
-  const cname = candidateNameInput.value.trim();
-  if (!cid || !cname) {
-    candidateError.textContent = 'Harap isi ID dan Nama Anda!';
+  if (!cid) {
+    candidateError.textContent = 'Harap isi email Anda!';
+    candidateError.style.color = '';
+    candidateIdInput.focus();
     return;
   }
-  candidateError.textContent = '';
-  state.candidateId = cid;
-  state.candidateName = cname;
 
-  localStorage.setItem('BMT_USER_SESSION', JSON.stringify({ candidateId: cid, candidateName: cname }));
-  showHistoryDashboard();
+  const isNameFieldVisible = !candidateNameInput.classList.contains('hidden');
+
+  if (isNameFieldVisible) {
+    // Tahap 2: Pengguna baru memasukkan nama lengkap
+    const cname = candidateNameInput.value.trim();
+    if (!cname) {
+      candidateError.textContent = 'Harap isi nama lengkap Anda!';
+      candidateError.style.color = '';
+      candidateNameInput.focus();
+      return;
+    }
+    candidateError.textContent = '';
+    candidateError.style.color = '';
+    state.candidateId = cid;
+    state.candidateName = cname;
+
+    localStorage.setItem(`BMT_NAME_${cid}`, cname);
+    localStorage.setItem('BMT_USER_SESSION', JSON.stringify({ candidateId: cid, candidateName: cname }));
+    showHistoryDashboard();
+    return;
+  }
+
+  // Tahap 1: Pengguna memasukkan email
+  candidateError.textContent = '';
+  candidateError.style.color = '';
+
+  // Cek cache identitas lokal seketika (0 ms)
+  const cachedName = localStorage.getItem(`BMT_NAME_${cid}`);
+  if (cachedName) {
+    state.candidateId = cid;
+    state.candidateName = cachedName;
+    localStorage.setItem('BMT_USER_SESSION', JSON.stringify({ candidateId: cid, candidateName: cachedName }));
+    showHistoryDashboard();
+    return;
+  }
+
+  // Jika belum ada di cache, periksa pendaftaran ke server
+  startTestBtn.disabled = true;
+  const originalBtnText = startTestBtn.textContent;
+  startTestBtn.textContent = 'Memeriksa...';
+
+  try {
+    const res = await fetch(`${state.apiUrl}?service=beat_my_type&action=get_history&candidateId=${encodeURIComponent(cid)}`);
+    const json = await res.json();
+
+    if (json.status === 'success' && json.isRegistered && json.candidateName) {
+      // Email sudah terdaftar sebelumnya di spreadsheet
+      const foundName = json.candidateName.trim();
+      state.candidateId = cid;
+      state.candidateName = foundName;
+      localStorage.setItem(`BMT_NAME_${cid}`, foundName);
+      localStorage.setItem('BMT_USER_SESSION', JSON.stringify({ candidateId: cid, candidateName: foundName }));
+
+      if (json.history) {
+        const quotaLimit = json.maxQuota || (json.admin && json.admin.maxQuota) || state.maxQuota;
+        localStorage.setItem(`BMT_HIST_${cid}`, JSON.stringify({
+          attemptsRemaining: json.attemptsRemaining,
+          maxQuota: quotaLimit,
+          history: json.history
+        }));
+      }
+      showHistoryDashboard();
+    } else {
+      // Email baru: munculkan field nama
+      candidateNameInput.classList.remove('hidden');
+      candidateNameInput.value = '';
+      candidateNameInput.focus();
+      startTestBtn.textContent = 'Lanjutkan Masuk';
+      candidateError.textContent = 'Email belum terdaftar. Silakan masukkan nama lengkap Anda:';
+      candidateError.style.color = 'var(--text-muted)';
+    }
+  } catch (err) {
+    // Fallback: jika offline/gagal koneksi, minta nama langsung
+    candidateNameInput.classList.remove('hidden');
+    candidateNameInput.focus();
+    startTestBtn.textContent = 'Lanjutkan Masuk';
+    candidateError.textContent = 'Silakan masukkan nama lengkap Anda:';
+    candidateError.style.color = 'var(--text-muted)';
+  } finally {
+    startTestBtn.disabled = false;
+    if (candidateNameInput.classList.contains('hidden')) {
+      startTestBtn.textContent = originalBtnText;
+    }
+  }
+}
+
+startTestBtn.addEventListener('click', handleLoginStep);
+
+candidateIdInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') handleLoginStep();
+});
+
+candidateNameInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') handleLoginStep();
 });
 
 // Logout / Ganti Peserta
@@ -496,6 +586,11 @@ logoutBtn.addEventListener('click', () => {
   identityCard.classList.remove('hidden');
   candidateIdInput.value = '';
   candidateNameInput.value = '';
+  candidateNameInput.classList.add('hidden');
+  startTestBtn.textContent = 'Lanjut';
+  candidateError.textContent = '';
+  candidateError.style.color = '';
+  candidateIdInput.focus();
 });
 
 // Dashboard Riwayat & Fetch Target (Stale-While-Revalidate: Tampil Instan)
@@ -531,6 +626,12 @@ async function showHistoryDashboard() {
     const json = await res.json();
 
     if (json.status === 'success') {
+      if (json.candidateName && json.candidateName !== state.candidateName) {
+        state.candidateName = json.candidateName;
+        welcomeText.textContent = `Halo, ${state.candidateName}`;
+        localStorage.setItem(`BMT_NAME_${state.candidateId}`, state.candidateName);
+      }
+
       // Perbarui Data Admin jika disertakan
       if (json.admin) {
         state.targetText = json.admin.targetText || state.targetText;
