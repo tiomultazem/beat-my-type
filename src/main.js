@@ -84,6 +84,8 @@ const resMaxAttempts = document.getElementById('resMaxAttempts');
 const quotaMax = document.getElementById('quotaMax');
 const adminDailyQuotaInput = document.getElementById('adminDailyQuotaInput');
 const saveDailyQuotaBtn = document.getElementById('saveDailyQuotaBtn');
+const leaderboardTbody = document.getElementById('leaderboardTbody');
+const refreshLeaderboardBtn = document.getElementById('refreshLeaderboardBtn');
 const closeModalBtn = document.getElementById('closeModalBtn');
 const updateToast = document.getElementById('updateToast');
 const reloadAppBtn = document.getElementById('reloadAppBtn');
@@ -151,6 +153,7 @@ unitButtons.forEach(btn => {
     localStorage.setItem('BMT_UNIT', state.activeUnit);
     updateSpeedLabels();
     updateStats();
+    if (currentLeaderboardData.length > 0) renderLeaderboardTable(currentLeaderboardData);
   });
 });
 
@@ -271,6 +274,7 @@ function unlockAdminPanel() {
   if (adminPinGate) adminPinGate.classList.add('hidden');
   if (adminPanelContent) adminPanelContent.classList.remove('hidden');
   if (adminDailyQuotaInput) adminDailyQuotaInput.value = state.maxQuota;
+  fetchLeaderboard();
 }
 
 if (toggleChallengeBtn) {
@@ -347,6 +351,79 @@ if (saveDailyQuotaBtn) {
       saveDailyQuotaBtn.textContent = 'Simpan';
     }
   });
+}
+
+// Logika Papan Peringkat Kandidat (Leaderboard)
+let currentLeaderboardData = [];
+
+async function fetchLeaderboard() {
+  if (!state.adminPin || !leaderboardTbody) return;
+  leaderboardTbody.innerHTML = `<tr><td colspan="7" class="text-muted" style="text-align: center; padding: 16px;">Memuat papan peringkat...</td></tr>`;
+  if (refreshLeaderboardBtn) {
+    refreshLeaderboardBtn.disabled = true;
+    refreshLeaderboardBtn.textContent = 'Memuat...';
+  }
+
+  try {
+    const res = await fetch(`${state.apiUrl}?service=beat_my_type&action=get_leaderboard&adminPin=${encodeURIComponent(state.adminPin)}`);
+    const json = await res.json();
+
+    if (json.status === 'success' && Array.isArray(json.leaderboard)) {
+      currentLeaderboardData = json.leaderboard;
+      renderLeaderboardTable(currentLeaderboardData);
+    } else {
+      leaderboardTbody.innerHTML = `<tr><td colspan="7" class="error-text" style="text-align: center; padding: 16px;">${json.message || 'Gagal memuat peringkat.'}</td></tr>`;
+    }
+  } catch (err) {
+    leaderboardTbody.innerHTML = `<tr><td colspan="7" class="error-text" style="text-align: center; padding: 16px;">Galat koneksi: ${err.message}</td></tr>`;
+  } finally {
+    if (refreshLeaderboardBtn) {
+      refreshLeaderboardBtn.disabled = false;
+      refreshLeaderboardBtn.textContent = 'Segarkan Peringkat';
+    }
+  }
+}
+
+function renderLeaderboardTable(items) {
+  if (!leaderboardTbody) return;
+  if (!items || items.length === 0) {
+    leaderboardTbody.innerHTML = `<tr><td colspan="7" class="text-muted" style="text-align: center; padding: 16px;">Belum ada data penantang yang valid.</td></tr>`;
+    return;
+  }
+
+  leaderboardTbody.innerHTML = items.map((it, idx) => {
+    const rank = idx + 1;
+    let rankBadgeClass = 'rank-other';
+    if (rank === 1) rankBadgeClass = 'rank-1';
+    else if (rank === 2) rankBadgeClass = 'rank-2';
+    else if (rank === 3) rankBadgeClass = 'rank-3';
+
+    const speedText = state.activeUnit === 'cpm'
+      ? `${it.cpm} CPM <span class="text-muted">(${it.wpm} WPM)</span>`
+      : `${it.wpm} WPM <span class="text-muted">(${it.cpm} CPM)</span>`;
+
+    return `
+      <tr>
+        <td style="text-align: center;"><span class="rank-badge ${rankBadgeClass}">${rank}</span></td>
+        <td><strong>${escapeHtml(it.candidateName)}</strong></td>
+        <td class="text-muted">${escapeHtml(it.candidateId)}</td>
+        <td style="text-align: right;"><span class="acc-badge">${it.accuracy}%</span></td>
+        <td style="text-align: right;">${speedText}</td>
+        <td style="text-align: right;">${it.duration}s</td>
+        <td style="text-align: center;" class="text-muted">${it.date || '-'}</td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function escapeHtml(str) {
+  return String(str || '').replace(/[&<>"']/g, m => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[m]));
+}
+
+if (refreshLeaderboardBtn) {
+  refreshLeaderboardBtn.addEventListener('click', fetchLeaderboard);
 }
 
 function updateSpeedLabels() {
