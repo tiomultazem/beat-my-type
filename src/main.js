@@ -415,10 +415,10 @@ function renderLeaderboardTable(items) {
           ${isBeatAdmin ? '<span class="badge-beat-admin">BEAT ADMIN</span>' : ''}
         </td>
         <td class="text-muted">${escapeHtml(it.candidateId)}</td>
+        <td style="text-align: right;"><strong>${it.score !== undefined ? it.score : '-'}</strong></td>
         <td style="text-align: right;"><span class="acc-badge">${it.accuracy}%</span></td>
         <td style="text-align: right;">${speedText}</td>
         <td style="text-align: right;">${it.duration}s</td>
-        <td style="text-align: center;" class="text-muted">${it.date || '-'}</td>
       </tr>
     `;
   }).join('');
