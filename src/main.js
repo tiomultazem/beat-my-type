@@ -10,6 +10,7 @@ const state = {
   mode: new URLSearchParams(window.location.search).get('mode') === 'admin' ? 'admin' : 'challenger',
   activeUnit: localStorage.getItem('BMT_UNIT') || 'wpm',
   isOpen: localStorage.getItem('BMT_IS_OPEN') !== 'false',
+  maxQuota: parseInt(localStorage.getItem('BMT_MAX_QUOTA'), 10) || 3,
   adminName: 'Admin',
   adminPin: sessionStorage.getItem('BMT_ADMIN_PIN') || '',
   candidateId: '',
@@ -79,9 +80,28 @@ const resAdminWpm = document.getElementById('resAdminWpm');
 const resAccuracy = document.getElementById('resAccuracy');
 const resDuration = document.getElementById('resDuration');
 const resAttempts = document.getElementById('resAttempts');
+const resMaxAttempts = document.getElementById('resMaxAttempts');
+const quotaMax = document.getElementById('quotaMax');
+const adminDailyQuotaInput = document.getElementById('adminDailyQuotaInput');
+const saveDailyQuotaBtn = document.getElementById('saveDailyQuotaBtn');
 const closeModalBtn = document.getElementById('closeModalBtn');
 const updateToast = document.getElementById('updateToast');
 const reloadAppBtn = document.getElementById('reloadAppBtn');
+
+function updateQuotaDisplay(remaining, max) {
+  if (max !== undefined && max !== null) {
+    state.maxQuota = Number(max);
+    localStorage.setItem('BMT_MAX_QUOTA', String(max));
+  }
+  if (quotaMax) quotaMax.textContent = state.maxQuota;
+  if (resMaxAttempts) resMaxAttempts.textContent = state.maxQuota;
+  if (adminDailyQuotaInput && document.activeElement !== adminDailyQuotaInput) {
+    adminDailyQuotaInput.value = state.maxQuota;
+  }
+  if (remaining !== undefined && remaining !== null) {
+    quotaRemaining.textContent = remaining;
+  }
+}
 
 // Version Polling for Auto-Update (Dynamic Version Detection)
 let currentVersion = null;
@@ -179,14 +199,20 @@ function updateChallengeStatusUI() {
         startTestBtn.disabled = false;
         startTestBtn.textContent = 'Masuk';
       }
-      const attemptsLeft = parseInt(quotaRemaining ? quotaRemaining.textContent : '3', 10);
+      const attemptsText = quotaRemaining ? quotaRemaining.textContent.trim() : '-';
       if (launchArenaBtn) {
-        if (!isNaN(attemptsLeft) && attemptsLeft <= 0) {
+        if (attemptsText === '-' || attemptsText === '...') {
           launchArenaBtn.disabled = true;
-          launchArenaBtn.textContent = 'Batas Kesempatan Hari Ini Habis';
+          launchArenaBtn.textContent = 'Memeriksa kuota...';
         } else {
-          launchArenaBtn.disabled = false;
-          launchArenaBtn.textContent = 'Mulai tantang admin!';
+          const attemptsLeft = parseInt(attemptsText, 10);
+          if (!isNaN(attemptsLeft) && attemptsLeft <= 0) {
+            launchArenaBtn.disabled = true;
+            launchArenaBtn.textContent = 'Batas Kesempatan Hari Ini Habis';
+          } else {
+            launchArenaBtn.disabled = false;
+            launchArenaBtn.textContent = 'Mulai tantang admin!';
+          }
         }
       }
     }
@@ -244,6 +270,7 @@ function showAdminPinGate() {
 function unlockAdminPanel() {
   if (adminPinGate) adminPinGate.classList.add('hidden');
   if (adminPanelContent) adminPanelContent.classList.remove('hidden');
+  if (adminDailyQuotaInput) adminDailyQuotaInput.value = state.maxQuota;
 }
 
 if (toggleChallengeBtn) {
@@ -282,6 +309,46 @@ if (toggleChallengeBtn) {
   });
 }
 
+if (saveDailyQuotaBtn) {
+  saveDailyQuotaBtn.addEventListener('click', async () => {
+    if (!state.adminPin) {
+      showAdminPinGate();
+      return;
+    }
+    const val = parseInt(adminDailyQuotaInput.value, 10);
+    if (isNaN(val) || val <= 0) {
+      alert('Batas kuota harian harus berupa angka positif!');
+      return;
+    }
+    saveDailyQuotaBtn.disabled = true;
+    saveDailyQuotaBtn.textContent = 'Menyimpan...';
+
+    try {
+      const res = await fetch(state.apiUrl, {
+        method: 'POST',
+        body: JSON.stringify({ setDailyQuota: val, adminPin: state.adminPin })
+      });
+      const json = await res.json();
+      if (json.status === 'success') {
+        updateQuotaDisplay(undefined, json.dailyQuota);
+        alert(`Batas kuota harian berhasil diubah menjadi ${json.dailyQuota}x!`);
+      } else {
+        alert(json.message || 'Gagal mengubah kuota');
+        if (json.message && json.message.includes('PIN')) {
+          sessionStorage.removeItem('BMT_ADMIN_PIN');
+          state.adminPin = '';
+          showAdminPinGate();
+        }
+      }
+    } catch (e) {
+      alert('Gagal mengubah batas kuota: ' + e.message);
+    } finally {
+      saveDailyQuotaBtn.disabled = false;
+      saveDailyQuotaBtn.textContent = 'Simpan';
+    }
+  });
+}
+
 function updateSpeedLabels() {
   if (speedUnitLbl) speedUnitLbl.textContent = state.activeUnit.toUpperCase();
   const adminTargetVal = state.activeUnit === 'cpm' 
@@ -303,6 +370,9 @@ async function fetchTargetBenchmark() {
       state.adminGhost = json.adminGhost || [];
       state.isOpen = (json.isOpen !== false);
       localStorage.setItem('BMT_IS_OPEN', state.isOpen ? 'true' : 'false');
+      if (json.maxQuota !== undefined) {
+        updateQuotaDisplay(undefined, json.maxQuota);
+      }
       updateChallengeStatusUI();
 
       // Update Login Banner
@@ -440,10 +510,18 @@ async function showHistoryDashboard() {
   if (cachedHistory) {
     try {
       const parsed = JSON.parse(cachedHistory);
-      quotaRemaining.textContent = parsed.attemptsRemaining !== undefined ? parsed.attemptsRemaining : '3';
+      updateQuotaDisplay(
+        parsed.attemptsRemaining !== undefined ? parsed.attemptsRemaining : state.maxQuota,
+        parsed.maxQuota || state.maxQuota
+      );
       renderHistory(parsed.history || []);
     } catch (e) {}
   } else {
+    updateQuotaDisplay('-', state.maxQuota);
+    if (launchArenaBtn) {
+      launchArenaBtn.disabled = true;
+      launchArenaBtn.textContent = 'Memeriksa kuota...';
+    }
     historyList.innerHTML = '<p class="text-muted">Menyinkronkan riwayat...</p>';
   }
 
@@ -473,7 +551,8 @@ async function showHistoryDashboard() {
       }
 
       // Perbarui Kuota dan Riwayat
-      quotaRemaining.textContent = json.attemptsRemaining;
+      const quotaLimit = json.maxQuota || (json.admin && json.admin.maxQuota) || state.maxQuota;
+      updateQuotaDisplay(json.attemptsRemaining, quotaLimit);
       updateChallengeStatusUI();
 
       renderHistory(json.history);
@@ -481,6 +560,7 @@ async function showHistoryDashboard() {
       // Simpan riwayat terbaru ke Cache Lokal
       localStorage.setItem(`BMT_HIST_${state.candidateId}`, JSON.stringify({
         attemptsRemaining: json.attemptsRemaining,
+        maxQuota: quotaLimit,
         history: json.history
       }));
     }
@@ -788,7 +868,7 @@ async function submitCandidateResult(wpm, cpm, accuracy, duration) {
     if (json.status === 'limit_exceeded') {
       resultBanner.className = 'result-banner banner-lost';
       resultBanner.textContent = json.message;
-      resAttempts.textContent = '0';
+      updateQuotaDisplay(0, json.maxQuota || state.maxQuota);
       return;
     }
 
@@ -800,7 +880,7 @@ async function submitCandidateResult(wpm, cpm, accuracy, duration) {
       resultBanner.textContent = `ANDA MASIH KALAH DIBANDINGKAN ${state.adminName.toUpperCase()}.`;
     }
 
-    resAttempts.textContent = json.attemptsRemaining !== undefined ? json.attemptsRemaining : '-';
+    updateQuotaDisplay(json.attemptsRemaining !== undefined ? json.attemptsRemaining : '-', json.maxQuota || state.maxQuota);
 
     // Invalidate / perbarui cache lokal agar reload berikutnya instan
     localStorage.removeItem(`BMT_HIST_${state.candidateId}`);
