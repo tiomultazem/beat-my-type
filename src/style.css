@@ -473,7 +473,7 @@ button:hover {
 .rank-2 { background: #c0c0c0; color: #000; }
 .rank-3 { background: #cd7f32; color: #000; }
 .rank-other { color: var(--text-muted); }
-.acc-badge { font-weight: bold; color: var(--primary); }
+.score-badge { font-weight: bold; color: var(--primary); }
 
 .leaderboard-table tbody tr.row-beat-admin {
   background: rgba(0, 231, 161, 0.12);
