@@ -475,6 +475,28 @@ button:hover {
 .rank-other { color: var(--text-muted); }
 .acc-badge { font-weight: bold; color: var(--primary); }
 
+.leaderboard-table tbody tr.row-beat-admin {
+  background: rgba(0, 231, 161, 0.12);
+}
+
+.leaderboard-table tbody tr.row-beat-admin:hover {
+  background: rgba(0, 231, 161, 0.22);
+}
+
+.badge-beat-admin {
+  display: inline-block;
+  margin-left: 8px;
+  background: rgba(0, 231, 161, 0.2);
+  color: var(--primary);
+  border: 1px solid var(--primary);
+  font-size: 0.65rem;
+  font-weight: bold;
+  padding: 2px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+  vertical-align: middle;
+}
+
 /* TARGET BANNER CARD */
 .target-card {
   background: rgba(245, 158, 11, 0.1);

@@ -403,10 +403,16 @@ function renderLeaderboardTable(items) {
       ? `${it.cpm} CPM <span class="text-muted">(${it.wpm} WPM)</span>`
       : `${it.wpm} WPM <span class="text-muted">(${it.cpm} CPM)</span>`;
 
+    const isBeatAdmin = (it.status === 'BEAT_ADMIN') || 
+      (it.cpm > (state.adminCpm || 0) && it.accuracy >= (state.adminAccuracy || 0) && it.accuracy >= 90);
+
     return `
-      <tr>
+      <tr class="${isBeatAdmin ? 'row-beat-admin' : ''}">
         <td style="text-align: center;"><span class="rank-badge ${rankBadgeClass}">${rank}</span></td>
-        <td><strong>${escapeHtml(it.candidateName)}</strong></td>
+        <td>
+          <strong>${escapeHtml(it.candidateName)}</strong>
+          ${isBeatAdmin ? '<span class="badge-beat-admin">BEAT ADMIN</span>' : ''}
+        </td>
         <td class="text-muted">${escapeHtml(it.candidateId)}</td>
         <td style="text-align: right;"><span class="acc-badge">${it.accuracy}%</span></td>
         <td style="text-align: right;">${speedText}</td>
