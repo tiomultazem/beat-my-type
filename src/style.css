@@ -322,11 +322,37 @@ button:hover {
   margin: 0;
 }
 
+.admin-controls-group {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
 .admin-status-toggle {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   font-size: 0.85rem;
+}
+
+.admin-quota-setting {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+}
+
+.quota-input-sm {
+  width: 50px;
+  background: var(--bg-color);
+  border: 1px solid var(--card-border);
+  color: var(--text-main);
+  padding: 4px 6px;
+  border-radius: 4px;
+  text-align: center;
+  font-size: 0.9rem;
+  font-weight: bold;
 }
 
 /* GERBANG PIN ADMIN */
