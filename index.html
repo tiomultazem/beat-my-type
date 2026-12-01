@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Beat My Type - Typing Benchmark Challenge</title>
+  <link rel="stylesheet" href="/src/style.css">
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <div class="brand">
+        <h1>BEAT<span>MY</span>TYPE</h1>
+        <p id="modeBadge" class="badge">Mode: Penantang</p>
+      </div>
+      <div class="api-config">
+        <label for="apiUrlInput">API Web App URL:</label>
+        <input type="text" id="apiUrlInput" placeholder="https://script.google.com/macros/s/.../exec">
+        <button id="saveApiBtn" class="btn-sm">Simpan</button>
+      </div>
+    </header>
+
+    <!-- IDENTITAS PESERTA -->
+    <section id="identityCard" class="card">
+      <h2>Identitas Penantang</h2>
+      <div class="form-row">
+        <input type="text" id="candidateId" placeholder="ID / No. Peserta / Email" required>
+        <input type="text" id="candidateName" placeholder="Nama Lengkap" required>
+        <button id="startTestBtn" class="btn-primary">Mulai Tes</button>
+      </div>
+      <p id="candidateError" class="error-text"></p>
+    </section>
+
+    <!-- ADMIN SETUP PANEL (Hanya muncul jika mode=admin) -->
+    <section id="adminPanel" class="card hidden">
+      <h2>Panel Admin: Buat Benchmark Target</h2>
+      <textarea id="customTargetText" placeholder="Masukkan teks benchmark di sini..."></textarea>
+      <button id="setAdminBenchmarkBtn" class="btn-warning">Mulai Rekam Benchmark Saya</button>
+    </section>
+
+    <!-- ARENA PENGETIKAN -->
+    <main id="arenaCard" class="card hidden">
+      <!-- TRACK RACE (TYPERACER STYLE) -->
+      <div class="race-track">
+        <div class="racer-row">
+          <span class="racer-label">Admin Target (<span id="adminWpmDisplay">0</span> WPM):</span>
+          <div class="track-bar">
+            <div id="adminProgress" class="progress-fill admin-fill"></div>
+          </div>
+        </div>
+        <div class="racer-row">
+          <span class="racer-label">Anda:</span>
+          <div class="track-bar">
+            <div id="userProgress" class="progress-fill user-fill"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- LIVE STATS -->
+      <div class="stats-bar">
+        <div class="stat-item"><span class="stat-val" id="liveWpm">0</span><span class="stat-lbl">WPM</span></div>
+        <div class="stat-item"><span class="stat-val" id="liveAcc">100%</span><span class="stat-lbl">Akurasi</span></div>
+        <div class="stat-item"><span class="stat-val" id="liveTime">0s</span><span class="stat-lbl">Waktu</span></div>
+      </div>
+
+      <!-- TYPING DISPLAY -->
+      <div id="textDisplay" class="text-display" tabindex="0"></div>
+      <input type="text" id="hiddenInput" class="hidden-input" autocomplete="off" autocapitalize="off" spellcheck="false">
+      <p class="hint-text">Klik area teks di atas untuk fokus. Penempelan teks (paste) diblokir.</p>
+    </main>
+
+    <!-- MODAL HASIL -->
+    <div id="resultModal" class="modal hidden">
+      <div class="modal-content">
+        <h2 id="resultTitle">Hasil Tes</h2>
+        <div id="resultBanner" class="result-banner"></div>
+        <div class="result-details">
+          <p>WPM Anda: <strong id="resUserWpm">0</strong> vs Admin: <strong id="resAdminWpm">0</strong></p>
+          <p>Akurasi: <strong id="resAccuracy">0%</strong> | Durasi: <strong id="resDuration">0s</strong></p>
+          <p>Sisa Kesempatan Hari Ini: <strong id="resAttempts">0</strong> / 3</p>
+        </div>
+        <button id="closeModalBtn" class="btn-primary">Tutup</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
