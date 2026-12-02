@@ -66,22 +66,6 @@ body {
   border-radius: 4px;
 }
 
-.api-config {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.85rem;
-}
-
-.api-config input {
-  background: var(--card-bg);
-  border: 1px solid var(--card-border);
-  color: var(--text-main);
-  padding: 6px 10px;
-  border-radius: 4px;
-  width: 240px;
-}
-
 .card {
   background: var(--card-bg);
   border: 1px solid var(--card-border);
@@ -325,4 +309,105 @@ button:hover {
   font-size: 0.95rem;
   color: var(--text-main);
   margin-bottom: 24px;
+}
+
+/* HISTORY DASHBOARD */
+.history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--card-border);
+  padding-bottom: 12px;
+  margin-bottom: 16px;
+}
+
+.history-header h2 {
+  margin: 0;
+  font-size: 1.3rem;
+}
+
+.text-muted {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  margin: 4px 0 0 0;
+}
+
+.quota-box {
+  background: var(--bg-color);
+  padding: 12px 16px;
+  border-radius: 6px;
+  border: 1px solid var(--card-border);
+  font-size: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.quota-box strong {
+  color: var(--primary);
+  font-size: 1.25rem;
+}
+
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.history-item {
+  background: var(--bg-color);
+  border: 1px solid var(--card-border);
+  padding: 10px 14px;
+  border-radius: 6px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.9rem;
+}
+
+.status-win {
+  color: var(--primary);
+  font-weight: bold;
+}
+
+.status-lost {
+  color: var(--danger);
+  font-weight: bold;
+}
+
+/* UPDATE TOAST NOTIFICATION */
+.update-toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: #1f2937;
+  border: 1px solid var(--primary);
+  color: var(--text-main);
+  padding: 12px 18px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+  z-index: 9999;
+  animation: slideUp 0.3s ease-out;
+}
+
+.update-toast span {
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+#reloadAppBtn {
+  background: var(--primary);
+  color: #000;
+  font-weight: bold;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
 }
