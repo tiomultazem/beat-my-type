@@ -13,27 +13,44 @@
         <h1>BEAT<span>MY</span>TYPE</h1>
         <p id="modeBadge" class="badge">Mode: Penantang</p>
       </div>
-      <div class="api-config">
-        <label for="apiUrlInput">API Web App URL:</label>
-        <input type="text" id="apiUrlInput" placeholder="https://script.google.com/macros/s/.../exec">
-        <button id="saveApiBtn" class="btn-sm">Simpan</button>
-      </div>
     </header>
 
-    <!-- IDENTITAS PESERTA -->
+    <!-- IDENTITAS PESERTA (LOGIN) -->
     <section id="identityCard" class="card">
       <h2>Identitas Penantang</h2>
       <div class="form-row">
         <input type="text" id="candidateId" placeholder="ID / No. Peserta / Email" required>
         <input type="text" id="candidateName" placeholder="Nama Lengkap" required>
-        <button id="startTestBtn" class="btn-primary">Mulai Tes</button>
+        <button id="startTestBtn" class="btn-primary">Masuk</button>
       </div>
       <p id="candidateError" class="error-text"></p>
+    </section>
+
+    <!-- DASHBOARD RIWAYAT PENANTANG -->
+    <section id="historyCard" class="card hidden">
+      <div class="history-header">
+        <div>
+          <h2 id="welcomeText">Halo, Penantang</h2>
+          <p id="sessionInfo" class="text-muted"></p>
+        </div>
+        <button id="logoutBtn" class="btn-sm">Ganti Peserta</button>
+      </div>
+
+      <div class="quota-box">
+        <span>Sisa Kesempatan Hari Ini:</span>
+        <strong id="quotaRemaining">3</strong> / 3
+      </div>
+
+      <h3>Riwayat Percobaan Anda:</h3>
+      <div id="historyList" class="history-list"></div>
+
+      <button id="launchArenaBtn" class="btn-primary" style="margin-top: 16px; width: 100%;">Mulai Tes Sekarang</button>
     </section>
 
     <!-- ADMIN SETUP PANEL (Hanya muncul jika mode=admin) -->
     <section id="adminPanel" class="card hidden">
       <h2>Panel Admin: Buat Benchmark Target</h2>
+      <input type="text" id="adminNameInput" placeholder="Nama Anda (Admin/Pemilik Rekor)" style="margin-bottom: 12px;">
       <textarea id="customTargetText" placeholder="Masukkan teks benchmark di sini..."></textarea>
       <button id="setAdminBenchmarkBtn" class="btn-warning">Mulai Rekam Benchmark Saya</button>
     </section>
@@ -43,7 +60,7 @@
       <!-- TRACK RACE (TYPERACER STYLE) -->
       <div class="race-track">
         <div class="racer-row">
-          <span class="racer-label">Admin Target (<span id="adminWpmDisplay">0</span> WPM):</span>
+          <span class="racer-label"><span id="adminNameDisplay">Admin</span> (<span id="adminWpmDisplay">0</span> WPM):</span>
           <div class="track-bar">
             <div id="adminProgress" class="progress-fill admin-fill"></div>
           </div>
@@ -68,6 +85,12 @@
       <input type="text" id="hiddenInput" class="hidden-input" autocomplete="off" autocapitalize="off" spellcheck="false">
       <p class="hint-text">Klik area teks di atas untuk fokus. Penempelan teks (paste) diblokir.</p>
     </main>
+
+    <!-- NOTIFIKASI PEMBARUAN APLIKASI -->
+    <div id="updateToast" class="update-toast hidden">
+      <span>Pembaruan baru tersedia!</span>
+      <button id="reloadAppBtn" class="btn-sm">Muat Ulang Sekarang</button>
+    </div>
 
     <!-- MODAL HASIL -->
     <div id="resultModal" class="modal hidden">
