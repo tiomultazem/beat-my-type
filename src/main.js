@@ -180,36 +180,49 @@ logoutBtn.addEventListener('click', () => {
   candidateNameInput.value = '';
 });
 
-// Dashboard Riwayat & Fetch Target
+// Dashboard Riwayat & Fetch Target (Stale-While-Revalidate: Tampil Instan)
 async function showHistoryDashboard() {
   identityCard.classList.add('hidden');
   historyCard.classList.remove('hidden');
   welcomeText.textContent = `Halo, ${state.candidateName}`;
   sessionInfo.textContent = `ID: ${state.candidateId}`;
-  historyList.innerHTML = '<p class="text-muted">Memuat riwayat...</p>';
 
+  // 1. Tampilkan dari Cache Lokal Seketika (0 ms)
+  const cachedHistory = localStorage.getItem(`BMT_HIST_${state.candidateId}`);
+  if (cachedHistory) {
+    try {
+      const parsed = JSON.parse(cachedHistory);
+      quotaRemaining.textContent = parsed.attemptsRemaining !== undefined ? parsed.attemptsRemaining : '3';
+      renderHistory(parsed.history || []);
+    } catch (e) {}
+  } else {
+    historyList.innerHTML = '<p class="text-muted">Menyinkronkan riwayat...</p>';
+  }
+
+  // 2. Sinkronkan dengan Server di Latar Belakang (Single Round-Trip)
   try {
-    const targetRes = await fetch(`${state.apiUrl}?service=beat_my_type&action=get_target`);
-    const targetJson = await targetRes.json();
-    if (targetJson.status === 'success') {
-      state.targetText = targetJson.targetText;
-      state.adminName = targetJson.adminName || 'Admin';
-      state.adminWpm = targetJson.adminWpm || 0;
-      state.adminAccuracy = targetJson.adminAccuracy || 0;
-      state.adminGhost = targetJson.adminGhost || [];
-      if (adminNameDashboard) adminNameDashboard.textContent = state.adminName;
-      if (adminWpmDashboard) adminWpmDashboard.textContent = state.adminWpm;
-      if (adminAccDashboard) adminAccDashboard.textContent = state.adminAccuracy;
-      adminNameDisplay.textContent = state.adminName;
-      adminWpmDisplay.textContent = state.adminWpm;
-    }
+    const res = await fetch(`${state.apiUrl}?service=beat_my_type&action=get_history&candidateId=${encodeURIComponent(state.candidateId)}`);
+    const json = await res.json();
 
-    const histRes = await fetch(`${state.apiUrl}?service=beat_my_type&action=get_history&candidateId=${encodeURIComponent(state.candidateId)}`);
-    const histJson = await histRes.json();
+    if (json.status === 'success') {
+      // Perbarui Data Admin jika disertakan
+      if (json.admin) {
+        state.targetText = json.admin.targetText || state.targetText;
+        state.adminName = json.admin.adminName || 'Admin';
+        state.adminWpm = json.admin.adminWpm || 0;
+        state.adminAccuracy = json.admin.adminAccuracy || 0;
+        state.adminGhost = json.admin.adminGhost || [];
 
-    if (histJson.status === 'success') {
-      quotaRemaining.textContent = histJson.attemptsRemaining;
-      if (histJson.attemptsRemaining <= 0) {
+        if (adminNameDashboard) adminNameDashboard.textContent = state.adminName;
+        if (adminWpmDashboard) adminWpmDashboard.textContent = state.adminWpm;
+        if (adminAccDashboard) adminAccDashboard.textContent = state.adminAccuracy;
+        if (adminNameDisplay) adminNameDisplay.textContent = state.adminName;
+        if (adminWpmDisplay) adminWpmDisplay.textContent = state.adminWpm;
+      }
+
+      // Perbarui Kuota dan Riwayat
+      quotaRemaining.textContent = json.attemptsRemaining;
+      if (json.attemptsRemaining <= 0) {
         launchArenaBtn.disabled = true;
         launchArenaBtn.textContent = 'Batas Kesempatan Hari Ini Habis';
       } else {
@@ -217,10 +230,18 @@ async function showHistoryDashboard() {
         launchArenaBtn.textContent = 'Mulai Tes Sekarang';
       }
 
-      renderHistory(histJson.history);
+      renderHistory(json.history);
+
+      // Simpan riwayat terbaru ke Cache Lokal
+      localStorage.setItem(`BMT_HIST_${state.candidateId}`, JSON.stringify({
+        attemptsRemaining: json.attemptsRemaining,
+        history: json.history
+      }));
     }
   } catch (err) {
-    historyList.innerHTML = `<p class="error-text">Gagal sinkron server: ${err.message}</p>`;
+    if (!cachedHistory) {
+      historyList.innerHTML = `<p class="error-text">Gagal sinkron server: ${err.message}</p>`;
+    }
   }
 }
 
@@ -469,6 +490,9 @@ async function submitCandidateResult(wpm, accuracy, duration) {
     }
 
     resAttempts.textContent = json.attemptsRemaining !== undefined ? json.attemptsRemaining : '-';
+
+    // Invalidate / perbarui cache lokal agar reload berikutnya instan
+    localStorage.removeItem(`BMT_HIST_${state.candidateId}`);
   } catch (err) {
     resultBanner.className = 'result-banner banner-lost';
     resultBanner.textContent = 'Gagal sinkronisasi server: ' + err.message;
