@@ -34,6 +34,12 @@ const quotaRemaining = document.getElementById('quotaRemaining');
 const historyList = document.getElementById('historyList');
 const launchArenaBtn = document.getElementById('launchArenaBtn');
 const logoutBtn = document.getElementById('logoutBtn');
+const adminNameLogin = document.getElementById('adminNameLogin');
+const adminWpmLogin = document.getElementById('adminWpmLogin');
+const adminAccLogin = document.getElementById('adminAccLogin');
+const adminNameDashboard = document.getElementById('adminNameDashboard');
+const adminWpmDashboard = document.getElementById('adminWpmDashboard');
+const adminAccDashboard = document.getElementById('adminAccDashboard');
 const adminPanel = document.getElementById('adminPanel');
 const arenaCard = document.getElementById('arenaCard');
 const candidateIdInput = document.getElementById('candidateId');
@@ -87,8 +93,39 @@ function initUpdateChecker() {
   }, 45000);
 }
 
+// Fetch Benchmark Target globally
+fetchTargetBenchmark();
+
 // Init Session Cache
 checkSavedSession();
+
+async function fetchTargetBenchmark() {
+  try {
+    const res = await fetch(`${state.apiUrl}?service=beat_my_type&action=get_target`);
+    const json = await res.json();
+    if (json.status === 'success') {
+      state.targetText = json.targetText || '';
+      state.adminName = json.adminName || 'Admin';
+      state.adminWpm = json.adminWpm || 0;
+      state.adminAccuracy = json.adminAccuracy || 0;
+      state.adminGhost = json.adminGhost || [];
+
+      // Update Login Banner
+      if (adminNameLogin) adminNameLogin.textContent = state.adminName;
+      if (adminWpmLogin) adminWpmLogin.textContent = state.adminWpm;
+      if (adminAccLogin) adminAccLogin.textContent = state.adminAccuracy;
+
+      // Update Dashboard & Race Display
+      if (adminNameDashboard) adminNameDashboard.textContent = state.adminName;
+      if (adminWpmDashboard) adminWpmDashboard.textContent = state.adminWpm;
+      if (adminAccDashboard) adminAccDashboard.textContent = state.adminAccuracy;
+      if (adminNameDisplay) adminNameDisplay.textContent = state.adminName;
+      if (adminWpmDisplay) adminWpmDisplay.textContent = state.adminWpm;
+    }
+  } catch (err) {
+    console.error('Gagal mengambil target admin:', err);
+  }
+}
 
 if (state.mode === 'admin') {
   modeBadge.textContent = 'Mode: Admin (Perekam Benchmark)';
@@ -160,6 +197,9 @@ async function showHistoryDashboard() {
       state.adminWpm = targetJson.adminWpm || 0;
       state.adminAccuracy = targetJson.adminAccuracy || 0;
       state.adminGhost = targetJson.adminGhost || [];
+      if (adminNameDashboard) adminNameDashboard.textContent = state.adminName;
+      if (adminWpmDashboard) adminWpmDashboard.textContent = state.adminWpm;
+      if (adminAccDashboard) adminAccDashboard.textContent = state.adminAccuracy;
       adminNameDisplay.textContent = state.adminName;
       adminWpmDisplay.textContent = state.adminWpm;
     }
